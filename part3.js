@@ -49,7 +49,7 @@ function postMedia(p){const m=MV['p'+p.id];if(!m&&!p.up)return '';return `<div s
 
 /* ---------- chrome ---------- */
 function renderTop(){
- $('#top').innerHTML=`<button class="logo" data-act="tab" data-id="feed" title="InfoNorthCyprus"><span class="mark">${ic('island','l')}</span><span class="t">InfoNorthCyprus</span></button>
+ $('#top').innerHTML=`<button class="logo" data-act="tab" data-id="feed" title="${SITE_NAME}"><span class="mark">${ic('island','l')}</span><span class="t">${SITE_SHORT}</span></button>
  <button class="ib" data-act="push" data-v="search" title="${T('search')}" aria-label="${T('search')}">${ic('search')}</button>
  <button class="ib" data-act="sheet" data-v="lang" title="${T('lang')}" aria-label="${T('lang')}">${ic('globe')}</button>
  <button class="ib" data-act="bell" title="${T('notifs')}" aria-label="${T('notifs')}">${ic('bell')}${isM()&&S.unread?`<span class="dot">${S.unread}</span>`:''}</button>
@@ -66,10 +66,10 @@ function render(){document.documentElement.lang=LANGS[S.L];applyTheme();renderTo
 
 /* ---------- feed ---------- */
 function notes(){
- let h='';
+ let h=payNote();
  if(S.role==='visitor')h+=`<div class="note g">${ic('info')}<div style="flex:1"><div>${T('visitor_bar')}</div><button class="btn block" style="margin-top:10px;min-height:40px" data-act="signup">${ic('user','s')}${T('join_free')}</button></div></div>`;
  if(S.role==='business'&&!S.verified)h+=`<div class="note sticky">${ic('shield')}<div><b>${T('verify_t')}</b><div class="sm">${T('verify_d')}</div></div></div>`;
- return h;
+ return h+bannerHtml('top');
 }
 function feedV(){
  let h='<div class="stack">'+notes();
@@ -96,7 +96,7 @@ function checkin(){
 function post(p){
  const P0=P[p.who],k='p'+p.id,lk=!!S.liked[k],n=p.likes+(lk?1:0);
  const cms=S.cmt[k];
- const wa='https://wa.me/?text='+encodeURIComponent(A(p.txt).slice(0,140)+' — InfoNorthCyprus');
+ const wa='https://wa.me/?text='+encodeURIComponent(A(p.txt).slice(0,140)+' — '+SITE_NAME);
  return `<article class="card post"><div class="ph">${av(p.who)}<div style="min-width:0"><b>${esc(P0.n)}${P0.org||P0.biz?` <span class="pill" style="vertical-align:1px">${ic('vcheck','s')}${P0.org?T('staff'):T('verified')}</span>`:''}</b><small>${ago(p.m)} · ${ic(audI[p.aud],'s')} ${T(audK[p.aud])}${p.help?' · '+T('help_tag'):''}</small></div></div>
  <div class="txt">${esc(A(p.txt))}</div>${postMedia(p)}
  <div class="acts">
@@ -104,7 +104,7 @@ function post(p){
   <button class="actb" data-act="cmt" data-id="${p.id}" title="${T('comment')}">${ic('msg')}<span>${p.cm.length||T('comment')}</span></button>
   <button class="actb" data-act="share" title="${T('share')}">${ic('share')}<span>${T('share')}</span></button>
   <a class="actb" href="${wa}" target="_blank" rel="noopener" title="${T('whatsapp')}">${ic('wa')}<span>${T('whatsapp')}</span></a>
-  <button class="actb" data-act="report" data-kind="post" data-id="${p.id}" title="${T('report')}">${ic('flag')}<span>${T('report')}</span></button>
+  ${(p.who==='me'||S.admin)?`<button class="actb" data-act="delpost" data-id="${p.id}" title="${T('delete')}">${ic('trash')}<span>${T('delete')}</span></button>`:''}<button class="actb" data-act="report" data-kind="post" data-id="${p.id}" title="${T('report')}">${ic('flag')}<span>${T('report')}</span></button>
  </div>
  ${cms?`<div class="cmts">${p.cm.map(c=>`<div class="cm">${av(c[0],30)}<div class="bub"><b>${esc(P[c[0]].n)}</b> ${esc(c[1])}</div></div>`).join('')}<div class="cform"><input id="ci-${p.id}" placeholder="${T('add_comment')}" maxlength="200"><button class="btn" data-act="cmtsend" data-id="${p.id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`:''}
  </article>`;
@@ -324,8 +324,8 @@ demo(d){become(d.id==='biz'?'biz':'ind','','Kyrenia','Kyrenia Garden Care','home
 like(d){if(gate())return;const k='p'+d.id;S.liked[k]=!S.liked[k];renderMain();renderOv(true)},
 cmt(d){const k='p'+d.id;S.cmt[k]=!S.cmt[k];renderMain();renderOv(true)},
 cmtsend(d){if(gate())return;const v=val('ci-'+d.id);if(!v)return;S.posts.find(p=>p.id==d.id).cm.push(['me',v]);renderMain();renderOv(true)},
-share(){copy('https://infonorthcyprus.demo/'+Math.random().toString(36).slice(2,7))},
-invite(){copy('https://infonorthcyprus.demo/join')},
+share(){copy(location.origin+'/')},
+invite(){copy(location.origin+'/')},
 report(d){if(gate())return;openSheet({v:'report',kind:d.kind,id:d.id})},
 rr(d){S.sheet.r=d.id;renderSheet()},repsend(){S.sheet.done=true;renderSheet()},
 msg(d){if(gate())return;openSheet({v:'msg',to:d.to,pre:d.pre})},
@@ -380,6 +380,4 @@ document.addEventListener('change',e=>{if(e.target.id!=='c-m'||!S.cr)return;cons
 document.addEventListener('scroll',e=>{const g=e.target;if(g&&g.classList&&g.classList.contains('gal')){const i=Math.round(g.scrollLeft/g.clientWidth)+1,c=g.parentNode.querySelector('.gc');if(c)c.textContent=i+'/'+g.children.length}},true);
 document.addEventListener('input',e=>{if(e.target.id==='sq')doSearch(e.target.value)});
 document.addEventListener('keydown',e=>{if(e.key!=='Escape')return;if(S.sheet)closeSheet();else if(S.stack.length)pop()});
-render();
-
-document.addEventListener('change',e=>{if(e.target.id!=='c-pf')return;const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const n=240,m=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=n;c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,n,n);P.me.img=c.toDataURL('image/jpeg',.82);render()};im.src=r.result};r.readAsDataURL(f)});
+document.addEventListener('change',e=>{if(e.target.id!=='c-pf')return;const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{const im=new Image();im.onload=()=>{const n=240,m=Math.min(im.width,im.height),c=document.createElement('canvas');c.width=c.height=n;c.getContext('2d').drawImage(im,(im.width-m)/2,(im.height-m)/2,m,m,0,0,n,n);savePhoto(c.toDataURL('image/jpeg',.82))};im.src=r.result};r.readAsDataURL(f)});
