@@ -199,7 +199,7 @@ async function loadStatic(){
  (l.data||[]).forEach(r=>{(DB.lists[r.kind]=DB.lists[r.kind]||[]).push(r.value)});
  if(cfg.data)DB.cfg=cfg.data;
  const row=Array.isArray(ct.data)?ct.data[0]:ct.data;
- if(row)DB.contact={phone:row.phone||'',email:row.email||''};
+ if(row)DB.contact={phone:row.phone||'',email:row.email||'',whatsapp:row.whatsapp||''};
  DB.clubs=cl.data||[];
 }
 function mapPost(r){
@@ -229,10 +229,11 @@ async function loadContent(){
   sb.from('meetups').select('*,meetup_going(user_id)').gte('starts_at',new Date(now-864e5).toISOString()).order('starts_at'),
   sb.from('banners').select('*'),
   S.uid?sb.from('club_members').select('club_id').eq('user_id',S.uid):Promise.resolve({data:[]}),
-  sb.rpc('club_counts')
+  sb.rpc('club_counts'),
+  sb.from('updates').select('*').order('created_at',{ascending:false}).limit(40)
  ];
  if(S.uid)q.push(sb.from('messages').select('*').or('to_id.eq.'+S.uid+',from_id.eq.'+S.uid).order('created_at',{ascending:false}).limit(80));
- const [pq,lq,dq,mq,bq,cq,nq,iq]=await Promise.all(q);
+ const [pq,lq,dq,mq,bq,cq,nq,uq,iq]=await Promise.all(q);S.upd=uq.data||[];
  const posts=pq.data||[],ls=lq.data||[],dr=dq.data||[],ms=mq.data||[];
  S.msgs=iq?iq.data||[]:[];
  await loadPeople([].concat(posts.map(p=>p.author),posts.flatMap(p=>(p.post_comments||[]).map(c=>c.author)),ls.map(l=>l.author),dr.map(d=>d.owner),ms.map(m=>m.author),S.msgs.flatMap(m=>[m.from_id,m.to_id])));
@@ -278,15 +279,13 @@ async function postLogin(){
  }
 }
 async function showLock(st){
- let c={phone:DB.contact.phone,email:DB.contact.email};
- const ct=await sb.rpc('contact_details');const row=Array.isArray(ct.data)?ct.data[0]:ct.data;if(row)c={phone:row.phone||'',email:row.email||''};
+ let c=DB.contact;
+ const ct=await sb.rpc('contact_details');const row=Array.isArray(ct.data)?ct.data[0]:ct.data;if(row)c={phone:row.phone||'',email:row.email||'',whatsapp:row.whatsapp||''};
  DB.contact=c;
  const el=$('#lock'),susp=st==='suspended';
  el.hidden=false;$('#app').hidden=true;$('#ov').hidden=true;$('#sh').hidden=true;
  el.innerHTML=`<div class="wrap" style="max-width:520px;padding-block:40px"><div class="stack"><div style="text-align:center"><div class="mark" style="margin:0 auto 14px;width:64px;height:64px">${ic(susp?'shield':'lock','l')}</div><h1 class="h1">${T(susp?'susp_t':'lock_t')}</h1><p class="mut" style="margin-top:10px">${T(susp?'susp_d':'lock_d')}</p></div>
- <div class="card stack">${c.phone?`<div class="row">${ic('phone2')}<div class="grow"><div class="xs mut">${T('phone')}</div><b style="font-size:20px">${esc(c.phone)}</b></div><button class="btn soft" data-act="copy" data-t="${esc(c.phone)}">${ic('copy','s')}${T('copy')}</button></div>`:''}
- ${c.email?`<div class="row">${ic('msg')}<div class="grow" style="min-width:0"><div class="xs mut">${T('email')}</div><b style="overflow-wrap:anywhere">${esc(c.email)}</b></div><button class="btn soft" data-act="copy" data-t="${esc(c.email)}">${ic('copy','s')}${T('copy')}</button></div>`:''}
- ${!c.phone&&!c.email?`<p class="mut">${T('susp_d')}</p>`:''}</div>
+ <div class="card stack">${contactRows(c)||`<p class="mut">${T('susp_d')}</p>`}</div>
  ${susp?'':`<p class="sm mut" style="text-align:center">${T('pay_how')}</p>`}
  <button class="btn line block" data-act="signout">${T('sign_out')}</button></div></div>`;
 }
@@ -296,10 +295,20 @@ function payNote(){
  const n=S.acct.days_left;
  return `<div class="note sticky" style="border-color:var(--r)">${ic('info')}<div style="flex:1"><b>${T('pay_t')}</b><div class="sm" style="margin-top:2px">${n<=1?T('pay_left1'):F('pay_left',{n})}</div>${contactLine()}</div></div>`;
 }
+const telHref=n=>'tel:'+String(n).replace(/[^\d+]/g,'');
+const waHref=n=>'https://wa.me/'+String(n).replace(/\D/g,'');
+function contactRows(c){
+ const r=[];
+ if(c.phone)r.push(`<div class="row">${ic('phone2')}<div class="grow"><div class="xs mut">${T('phone')}</div><b style="font-size:19px">${esc(c.phone)}</b></div><a class="btn soft" href="${telHref(c.phone)}">${ic('phone2','s')}${T('call')}</a></div>`);
+ if(c.whatsapp)r.push(`<div class="row">${ic('wa')}<div class="grow"><div class="xs mut">WhatsApp</div><b style="font-size:19px">${esc(c.whatsapp)}</b></div><a class="btn soft" href="${waHref(c.whatsapp)}" target="_blank" rel="noopener">${ic('wa','s')}${T('chat')}</a></div>`);
+ if(c.email)r.push(`<div class="row">${ic('msg')}<div class="grow" style="min-width:0"><div class="xs mut">${T('email')}</div><b style="overflow-wrap:anywhere">${esc(c.email)}</b></div><a class="btn soft" href="mailto:${esc(c.email)}">${ic('send','s')}${T('email')}</a></div>`);
+ return r.join('');
+}
 function contactLine(){
- const c=DB.contact,bits=[];
- if(c.phone)bits.push(esc(c.phone));if(c.email)bits.push(esc(c.email));
- return bits.length?`<div class="xs mut" style="margin-top:4px;overflow-wrap:anywhere">${bits.join(' · ')}</div>`:'';
+ const c=DB.contact,b=[];
+ if(c.phone)b.push(`<a class="btn soft" href="${telHref(c.phone)}">${ic('phone2','s')}${esc(c.phone)}</a>`);
+ if(c.whatsapp)b.push(`<a class="btn soft" href="${waHref(c.whatsapp)}" target="_blank" rel="noopener">${ic('wa','s')}${esc(c.whatsapp)}</a>`);
+ return b.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;justify-content:center">${b.join('')}</div>${c.email?`<div class="xs mut" style="margin-top:6px;overflow-wrap:anywhere">${esc(c.email)}</div>`:''}`:(c.email?`<div class="xs mut">${esc(c.email)}</div>`:'');
 }
 function feeText(){
  const c=DB.cfg||{};if(c.monthly_fee_try)return Number(c.monthly_fee_try).toLocaleString(LOC[S.L])+' TL';
@@ -318,7 +327,7 @@ function acctCard(){
 function bannerHtml(zone){
  const today=new Date().toISOString().slice(0,10);
  const list=(DB.banners||[]).filter(b=>b.enabled&&b.zone===zone&&(!b.starts_on||b.starts_on<=today)&&(!b.ends_on||b.ends_on>=today)&&(!b.pages||!b.pages.length||b.pages.includes(S.tab)));
- return list.map(b=>`<div class="card banner">${b.image_url?`<img class="art" src="${esc(b.image_url)}" alt="" style="border-radius:12px;margin-bottom:8px">`:''}<div class="xs mut" style="text-transform:uppercase;letter-spacing:.06em">${T('sponsor')}</div><b>${esc(b.headline||'')}</b>${b.body?`<div class="sm mut">${esc(b.body)}</div>`:''}${b.link_url?`<a class="btn soft" style="margin-top:8px" href="${esc(b.link_url)}" target="_blank" rel="noopener">${T('open')}</a>`:''}</div>`).join('');
+ return list.map(b=>`<div class="card banner">${b.image_url?`<img src="${esc(b.image_url)}" alt="" style="display:block;width:100%;height:auto;max-height:170px;object-fit:cover;border-radius:12px;margin-bottom:8px">`:''}<div class="xs mut" style="text-transform:uppercase;letter-spacing:.06em">${T('sponsor')}</div><b>${esc(b.headline||'')}</b>${b.body?`<div class="sm mut">${esc(b.body)}</div>`:''}${b.link_url?`<a class="btn soft" style="margin-top:8px" href="${esc(b.link_url)}" target="_blank" rel="noopener">${T('open')}</a>`:''}</div>`).join('');
 }
 N({me_vis_d:["Join to get your own profile, post, message and sell.","Profil, paylaşım, mesaj ve satış için katılın.","Dołącz, aby mieć profil, pisać, wysyłać wiadomości i sprzedawać.","Присоединяйтесь, чтобы создать профиль, писать, переписываться и продавать."]});
 N({
@@ -326,6 +335,8 @@ N({
  soon_d:["Welcome. You are among the very first to see this. We are building a friendly home for everyone who visits or lives in North Cyprus: ask questions, meet neighbours, buy and sell small things and find trusted local help. Nothing quite like it exists here yet, and we are shaping it with the people who will use it.","Hoş geldiniz. Bunu görenlerin ilkleri arasındasınız. Kuzey Kıbrıs'ı ziyaret eden ya da burada yaşayan herkes için sıcak bir yuva kuruyoruz: soru sorun, komşularla tanışın, küçük eşyalar alıp satın ve güvenilir yerel yardım bulun. Burada henüz buna benzer bir şey yok ve onu kullanacak insanlarla birlikte şekillendiriyoruz.","Witamy. Jesteś wśród pierwszych osób, które to widzą. Tworzymy przyjazny dom dla wszystkich, którzy odwiedzają Cypr Północny lub tu mieszkają: zadawaj pytania, poznawaj sąsiadów, kupuj i sprzedawaj drobiazgi i znajdź zaufaną pomoc. Czegoś takiego tu jeszcze nie ma, a kształtujemy to razem z ludźmi, którzy będą z tego korzystać.","Добро пожаловать. Вы среди первых, кто это видит. Мы создаём дружелюбный дом для всех, кто бывает или живёт на Северном Кипре: задавайте вопросы, знакомьтесь с соседями, покупайте и продавайте мелочи и находите надёжную местную помощь. Ничего подобного здесь ещё нет, и мы формируем это вместе с теми, кто будет им пользоваться."],
  soon_b:["Have a look around","Göz atın","Rozejrzyj się","Осмотритесь"]
 });
+N({cr_price:["Price (0 = free)","Fiyat (0 = ücretsiz)","Cena (0 = za darmo)","Цена (0 = бесплатно)"]});
+N({call:["Call","Ara","Zadzwoń","Позвонить"],chat:["Chat","Yaz","Napisz","Написать"]});
 N({sponsor:["Sponsored","Sponsorlu","Sponsorowane","Реклама"],open:["Open","Aç","Otwórz","Открыть"]});
 
 /* ---------- brand / links ---------- */
@@ -338,7 +349,7 @@ SH.signin=s=>`<h2 class="h2">${T('sign_in')}</h2><div class="stack" style="margi
 SH.newpw=s=>`<h2 class="h2">${T('newpw_t')}</h2><div class="stack" style="margin-top:12px"><input id="np" type="password" autocomplete="new-password" placeholder="${esc(T('pw'))}" aria-label="${esc(T('pw'))}"><button class="btn block" data-act="donewpw">${T('save')}</button></div>`;
 SH.soon=()=>`<div style="text-align:center"><div class="mark" style="margin:0 auto 12px;width:64px;height:64px">${ic('island','l')}</div><h2 class="h2">${T('soon_t')}</h2><p class="mut" style="margin:10px 0 16px">${T('soon_d')}</p><button class="btn block" data-act="sclose">${T('soon_b')}</button></div>`;
 SH.due=()=>{const n=S.acct?S.acct.days_left:0;return `<div style="text-align:center"><div class="mark" style="margin:0 auto 10px;width:56px;height:56px">${ic('info','l')}</div><h2 class="h2">${T('pay_t')}</h2><div class="bignum" style="margin:10px 0">${n}</div><p style="font-weight:600">${n<=1?T('pay_left1'):F('pay_left',{n})}</p><p class="sm mut" style="margin:10px 0">${T('pay_how')}</p>${feeText()?`<p class="sm"><b>${F('pay_fee',{f:feeText()})}</b></p>`:''}${contactLine()}<button class="btn block" style="margin-top:14px" data-act="sclose">${T('gotit')}</button></div>`};
-SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}${DB.contact.phone?sosRow(T('sos_adm'),esc(DB.contact.phone)):''}</div>`;
+SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}${DB.contact.phone||DB.contact.whatsapp?`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({phone:DB.contact.phone,whatsapp:DB.contact.whatsapp,email:''})}</div>`:''}</div>`;
 ACT.signinsheet=()=>openSheet({v:'signin'});
 ACT.dosignin=async()=>{
  const e=val('si-e'),p=($('#si-p')||{}).value||'';
@@ -423,6 +434,8 @@ function feedV(){
  if(ppl.length)h+=`<section><h2 class="h3">${T('friends')}</h2><div class="leaves">`+ppl.map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+`<button class="leaf inv" data-act="invite"><span class="lf">${ic('plus')}</span><span class="n">${T('invite')}</span></button></div></section>`;
  if(isM())h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="create" data-type="post">${av('me',40)}<span class="grow mut">${T('compose_ph')}</span>${ic('image','s')}</button>`;
  h+=bannerHtml('feed');
+ const lu=(S.upd||[])[0];
+ if(lu&&Date.now()-new Date(lu.created_at)<14*864e5)h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="update" data-id="${lu.id}"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('bell')}</span><div class="grow" style="min-width:0"><div class="xs mut">${T('up_from')}</div><b>${esc(lu.title)}</b></div>${ic('right')}</button>`;
  const list=S.posts.filter(p=>!p.club).slice().sort((a,b)=>a.m-b.m);
  if(!list.length)h+=`<div class="card" style="text-align:center"><p class="mut">${T('none_posts')}</p></div>`;
  const lim=S.role==='visitor'?3:list.length;
@@ -453,7 +466,7 @@ ACT.cmtsend=async d=>{
 
 /* ---------- explore (no TFR-specific modules) ---------- */
 function exploreV(){
- const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['checklist','ck',T('m_check'),CK.length+' ✓']];
+ const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓']];
  return `<div class="stack">${notes()}<div class="hero"><h1 class="h1" style="max-width:85%">${T('tagline')}</h1><p style="margin-top:8px;max-width:85%" class="mut">${T('exp_hero_d')}</p></div>${bannerHtml('explore')}
  <div class="grid2">${mods.map(m=>`<button class="mod" data-act="push" data-v="${m[0]}"><span class="lf">${ic(m[1])}</span><b>${m[2]}</b><small>${m[3]}</small></button>`).join('')}</div>
  ${appCard()}${footerV()}</div>`;
@@ -583,6 +596,10 @@ async function markRead(from){
 ACT.bell=()=>{if(!isM())return push('notifs');push('inbox')};
 V.notifs=function(){return {t:T('notifs'),b:`<div class="stack"><div class="card"><div class="row"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('bell')}</span><div class="grow"><b>${T('nf_t')}</b></div><button class="tg ${S.notif?'on':''}" role="switch" aria-checked="${S.notif}" data-act="notif" aria-label="${T('notifs')}"><i></i></button></div><p class="sm mut" style="margin-top:10px">${T('nf_d')}</p></div><button class="btn block" data-act="signup">${T('join_free')}</button></div>`}};
 
+/* ---------- community news ---------- */
+V.updates=function(){return {t:T('m_updates'),b:`<div class="stack">${(S.upd||[]).length?S.upd.map(u=>rowt('push','update',u.id,u.image_url?`<span class="th"><img class="art" src="${esc(u.image_url)}" alt=""></span>`:thmRaw('group',hueOf(u.id)),esc(u.title),ymd(u.created_at))).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_yet')}</p></div>`}</div>`}};
+V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T('m_updates'),b:''};return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span><h1 class="h1">${esc(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(u.body)}</p><div class="note g">${ic('info')}<div class="sm">${T('up_from')}</div></div><button class="btn soft block" data-act="share">${ic('share','s')}${T('share')}</button></div>`}};
+
 /* ---------- reports ---------- */
 ACT.repsend=async()=>{
  const s=S.sheet;if(!s.r)return;
@@ -692,7 +709,7 @@ ACT.crpub=async function(){
 /* ---------- policies ---------- */
 function policyText(id){
  const c=DB.contact,fee=feeText()||'(to be confirmed)',fm=DB.cfg.free_months||3,gd=DB.cfg.grace_days||4;
- const contact=[c.phone,c.email].filter(Boolean).join(' · ')||'the contact details shown in the app';
+ const contact=[c.phone,c.whatsapp?'WhatsApp '+c.whatsapp:'',c.email].filter(Boolean).join(' · ')||'the contact details shown in the app';
  const X={
  about:[['Who we are',`${SITE_NAME} is a private community platform for visitors to North Cyprus and for foreign residents who live here. It is a place to ask questions, share tips, meet people, buy and sell small things, and find local businesses.`],['What we are not',`We are not an estate agent, a bank, a shop or a government body. The platform stands on its own. It is run by two private individuals and does not trade under any company name.`],['Who it is for',`The community is intended for visitors and foreign residents. It is not intended for Cypriot nationals or permanent residents. Anyone can sign up, and the administrators decide who is eligible and may close an account that does not fit.`]],
  terms:[['Using the community',`Be kind and honest. No hate, harassment, scams, adverts for services we do not list, adult content or anything illegal. Do not post other people's private details. You are responsible for what you post.`],['Community marketplace',`The marketplace is for small, everyday items. No cars, no property and no services. Listings last 30 days and use photos only. Deals are made directly between members, in person and in cash or however you agree. The platform never takes payment, holds money or guarantees any sale. Check items before you pay.`],['Advice and guides',`Guides and posts are shared by the community. They are not legal, tax, medical or financial advice. Always check with official sources and qualified professionals before you act.`],['Moderation',`The administrators have full control of the platform and may edit, hide or remove any content, change or close any account, and change these terms at any time. Report anything that worries you with the flag button.`],['Businesses',`Business directory listings and banners are agreed with the administrators, are paid monthly, and may be removed at any time. A business shows as unverified until the administrators confirm it.`]],
