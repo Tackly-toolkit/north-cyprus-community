@@ -96,15 +96,15 @@ function checkin(){
 function post(p){
  const P0=P[p.who],k='p'+p.id,lk=!!S.liked[k],n=p.likes+(lk?1:0);
  const cms=S.cmt[k];
- const wa='https://wa.me/?text='+encodeURIComponent(A(p.txt).slice(0,140)+' — '+SITE_NAME);
+ const wa='https://wa.me/?text='+encodeURIComponent(A(p.txt).slice(0,120)+' — '+SITE_NAME+' '+itemUrl('post',p.id));
  return `<article class="card post"><div class="ph">${av(p.who)}<div style="min-width:0"><b>${esc(P0.n)}${P0.org||P0.biz?` <span class="pill" style="vertical-align:1px">${ic('vcheck','s')}${P0.org?T('staff'):T('verified')}</span>`:''}</b><small>${ago(p.m)} · ${ic(audI[p.aud],'s')} ${T(audK[p.aud])}${p.help?' · '+T('help_tag'):''}</small></div></div>
  <div class="txt">${esc(A(p.txt))}</div>${postMedia(p)}
  <div class="acts">
   <button class="actb ${lk?'on':''}" data-act="like" data-id="${p.id}" title="${T('like')}">${ic('heart')}<span>${n}</span></button>
   <button class="actb" data-act="cmt" data-id="${p.id}" title="${T('comment')}">${ic('msg')}<span>${p.cm.length||T('comment')}</span></button>
-  <button class="actb" data-act="share" title="${T('share')}">${ic('share')}<span>${T('share')}</span></button>
+  <button class="actb" data-act="share" data-k="post" data-id="${p.id}" data-t="${esc(A(p.txt).slice(0,100))}" title="${T('share')}">${ic('share')}<span>${T('share')}</span></button>
   <a class="actb" href="${wa}" target="_blank" rel="noopener" title="${T('whatsapp')}">${ic('wa')}<span>${T('whatsapp')}</span></a>
-  ${(p.who==='me'||S.admin)?`<button class="actb" data-act="delpost" data-id="${p.id}" title="${T('delete')}">${ic('trash')}<span>${T('delete')}</span></button>`:''}<button class="actb" data-act="report" data-kind="post" data-id="${p.id}" title="${T('report')}">${ic('flag')}<span>${T('report')}</span></button>
+  ${(p.who==='me'||S.admin)?`<button class="actb" data-act="delpost" data-id="${p.id}" title="${T('delete')}" aria-label="${T('delete')}">${ic('trash')}</button>`:''}<button class="actb" data-act="report" data-kind="post" data-id="${p.id}" title="${T('report')}">${ic('flag')}<span>${T('report')}</span></button>
  </div>
  ${cms?`<div class="cmts">${p.cm.map(c=>`<div class="cm">${av(c[0],30)}<div class="bub"><b>${esc(P[c[0]].n)}</b> ${esc(c[1])}</div></div>`).join('')}<div class="cform"><input id="ci-${p.id}" placeholder="${T('add_comment')}" maxlength="200"><button class="btn" data-act="cmtsend" data-id="${p.id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`:''}
  </article>`;

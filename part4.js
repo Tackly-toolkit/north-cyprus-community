@@ -212,13 +212,13 @@ function mapPost(r){
 function mapListing(r){
  const sub=cById(r.category_id),top=sub&&sub.parent_id?cById(sub.parent_id):sub;
  return {id:r.id,t:r.title,d:r.description,price:Number(r.price),cur:r.currency,cat:r.category_id,catTop:top?top.id:'',catName:sub?(top&&sub.parent_id?top.name+' · '+sub.name:sub.name):'',
-  who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,status:r.status,ic:'tag'};
+  who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,at:r.created_at,status:r.status,ic:'tag'};
 }
 function mapDir(r){
  return {id:r.id,n:r.name,cat:r.category_id,catName:cName(r.category_id),area:areaLabel(r.district_id,r.town_id,r.area_id),district:r.district_id,addr:r.address||'',off:r.offer||'',ver:r.verified?1:0,status:r.status,who:whoKey(r.owner),img:r.photo_url||'',k:r.name};
 }
 function mapMeet(r){
- return {id:r.id,ic:'users',t:r.title,starts:r.starts_at,where:[r.address,areaLabel(r.district_id,r.town_id,r.area_id)].filter(Boolean).join(', '),who:whoKey(r.author),n:(r.meetup_going||[]).length,goingMe:(r.meetup_going||[]).some(x=>x.user_id===S.uid),area:areaLabel(r.district_id,r.town_id,r.area_id)};
+ return {id:r.id,ic:'users',t:r.title,at:r.created_at,starts:r.starts_at,where:[r.address,areaLabel(r.district_id,r.town_id,r.area_id)].filter(Boolean).join(', '),who:whoKey(r.author),n:(r.meetup_going||[]).length,goingMe:(r.meetup_going||[]).some(x=>x.user_id===S.uid),area:areaLabel(r.district_id,r.town_id,r.area_id)};
 }
 async function loadContent(){
  const now=new Date();
@@ -230,13 +230,18 @@ async function loadContent(){
   sb.from('banners').select('*'),
   S.uid?sb.from('club_members').select('club_id').eq('user_id',S.uid):Promise.resolve({data:[]}),
   sb.rpc('club_counts'),
-  sb.from('updates').select('*').order('created_at',{ascending:false}).limit(40)
+  sb.from('updates').select('*').order('created_at',{ascending:false}).limit(40),
+  sb.from('item_likes').select('kind,item_id,user_id'),
+  sb.from('item_comments').select('*').order('created_at').limit(500)
  ];
  if(S.uid)q.push(sb.from('messages').select('*').or('to_id.eq.'+S.uid+',from_id.eq.'+S.uid).order('created_at',{ascending:false}).limit(80));
- const [pq,lq,dq,mq,bq,cq,nq,uq,iq]=await Promise.all(q);S.upd=uq.data||[];
+ const [pq,lq,dq,mq,bq,cq,nq,uq,lkq,ccq,iq]=await Promise.all(q);S.upd=uq.data||[];
+ DB.il={};DB.ic={};
+ (lkq.data||[]).forEach(x=>{const k=x.kind+':'+x.item_id,o=DB.il[k]||(DB.il[k]={n:0,mine:false});o.n++;if(x.user_id===S.uid)o.mine=true});
+ (ccq.data||[]).forEach(x=>{(DB.ic[x.kind+':'+x.item_id]=DB.ic[x.kind+':'+x.item_id]||[]).push(x)});
  const posts=pq.data||[],ls=lq.data||[],dr=dq.data||[],ms=mq.data||[];
  S.msgs=iq?iq.data||[]:[];
- await loadPeople([].concat(posts.map(p=>p.author),posts.flatMap(p=>(p.post_comments||[]).map(c=>c.author)),ls.map(l=>l.author),dr.map(d=>d.owner),ms.map(m=>m.author),S.msgs.flatMap(m=>[m.from_id,m.to_id])));
+ await loadPeople([].concat(posts.map(p=>p.author),posts.flatMap(p=>(p.post_comments||[]).map(c=>c.author)),ls.map(l=>l.author),dr.map(d=>d.owner),ms.map(m=>m.author),(ccq.data||[]).map(c=>c.author),S.msgs.flatMap(m=>[m.from_id,m.to_id])));
  S.posts=posts.map(mapPost);S.listings=ls.map(mapListing);S.dir=dr.map(mapDir);S.meetups=ms.map(mapMeet);
  S.verified=S.dir.some(b=>b.who==='me'&&b.ver);
  DB.banners=bq.data||[];
@@ -340,7 +345,6 @@ N({call:["Call","Ara","Zadzwoń","Позвонить"],chat:["Chat","Yaz","Napis
 N({sponsor:["Sponsored","Sponsorlu","Sponsorowane","Реклама"],open:["Open","Aç","Otwórz","Открыть"]});
 
 /* ---------- brand / links ---------- */
-ACT.share=function(){copy(location.origin+'/')};
 ACT.invite=function(){copy(location.origin+'/')};
 
 /* ---------- auth screens ---------- */
@@ -427,26 +431,6 @@ ACT.sudone=()=>popall();
 
 /* ---------- navigation chrome ---------- */
 
-/* ---------- feed ---------- */
-function feedV(){
- let h='<div class="stack">'+notes();
- const ppl=Object.keys(P).filter(k=>k!=='me'&&!P[k].org).slice(0,5);
- if(ppl.length)h+=`<section><h2 class="h3">${T('friends')}</h2><div class="leaves">`+ppl.map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+`<button class="leaf inv" data-act="invite"><span class="lf">${ic('plus')}</span><span class="n">${T('invite')}</span></button></div></section>`;
- if(isM())h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="create" data-type="post">${av('me',40)}<span class="grow mut">${T('compose_ph')}</span>${ic('image','s')}</button>`;
- h+=bannerHtml('feed');
- const lu=(S.upd||[])[0];
- if(lu&&Date.now()-new Date(lu.created_at)<14*864e5)h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="update" data-id="${lu.id}"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('bell')}</span><div class="grow" style="min-width:0"><div class="xs mut">${T('up_from')}</div><b>${esc(lu.title)}</b></div>${ic('right')}</button>`;
- const list=S.posts.filter(p=>!p.club).slice().sort((a,b)=>a.m-b.m);
- if(!list.length)h+=`<div class="card" style="text-align:center"><p class="mut">${T('none_posts')}</p></div>`;
- const lim=S.role==='visitor'?3:list.length;
- list.slice(0,lim).forEach(p=>h+=post(p));
- if(S.role==='visitor'){
-  h+=`<div class="card" style="text-align:center"><h3 class="h2">${T('gate_t')}</h3><p class="mut" style="margin:6px 0 12px">${T('gate_d')}</p><button class="btn block" data-act="signup">${T('join_free')}</button></div>`;
- }else if(list.length){
-  h+=`<div class="card" style="text-align:center"><div class="mark" style="margin:0 auto 8px;width:44px;height:44px">${ic('check','l')}</div><div class="mut">${T('caught')}</div><button class="btn soft" style="margin-top:12px" data-act="refresh">${ic('refresh','s')}${T('refresh')}</button></div>`;
- }
- return h+'</div>';
-}
 function checkin(){return ''}   // streak check-in belongs to the demo only
 ACT.refresh=async()=>{await loadContent();render();toast(T('refreshed'))};
 ACT.checkin=()=>{};
@@ -491,6 +475,7 @@ V.listing=function(o){
  const w=P[l.who]||{n:'Member',h:150},mine=l.who==='me';
  const gal2=l.imgs.length?`<div class="galw"><div class="gal">${l.imgs.map(u=>`<div class="sl"><img class="art" src="${esc(u)}" alt=""></div>`).join('')}</div>${l.imgs.length>1?`<span class="gc">1/${l.imgs.length}</span>`:''}</div>`:`<div class="galw"><div class="gal"><div class="sl">${art('tag',hueOf(l.id),0,l.t)}</div></div></div>`;
  return {t:T('mk_title'),b:`<div class="stack"><div>${gal2}</div><div><span class="pill">${esc(l.catName)}</span><h1 class="h1" style="margin-top:8px">${esc(l.t)}</h1><div class="h2" style="color:var(--gd);margin-top:4px">${l.price?money(l.price,l.cur):T('free')}</div></div><p>${esc(l.d)}</p>
+ ${actBar('listing',l.id,l.t,{})}
  <div class="card stack">${l.cond?`<div class="row"><span class="grow mut">${T('cr_cond')}</span><b>${esc(l.cond)}</b></div>`:''}${l.hand?`<div class="row"><span class="grow mut">${T('cr_hand')}</span><b>${esc(l.hand)}</b></div>`:''}
  <div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('address')}</div><b>${esc(l.area)}</b></div></div><a class="btn soft block" href="${mapsUrl(l.area)}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a><div class="xs mut">${F('expires_on',{d:ymd(l.exp)})}</div></div>
  <button class="listrow" data-act="push" data-v="person" data-id="${l.who}">${av(l.who,44)}<span class="grow"><span class="xs mut">${T('sold_by')}</span><b>${esc(w.n)}</b></span>${ic('right')}</button>
@@ -536,7 +521,7 @@ V.event=function(o){
  return {t:esc(e.t),b:`<div class="stack"><div><span class="pill">${ic('cal','s')}${T('m_events')}</span><h1 class="h1" style="margin-top:10px">${esc(e.t)}</h1></div>
  <div class="card stack"><div class="row">${ic('cal')}<div class="grow"><div class="xs mut">${T('ev_when')}</div><b>${fdate(e.starts.slice(0,10),1)} · ${new Date(e.starts).toLocaleTimeString(LOC[S.L],{hour:'2-digit',minute:'2-digit'})}</b></div></div><div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('ev_where')}</div><b>${esc(e.where||T('ev_venue'))}</b></div></div><a class="btn soft block" href="${mapsUrl(e.where)}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a><div class="row">${ic('users')}<div class="grow"><b>${F('ev_who',{n})}</b></div></div></div>
  <button class="btn block ${g?'soft':''}" data-act="going" data-id="${e.id}">${ic(g?'check':'plus','s')}${g?T('going_on'):T('going')}</button>
- <div class="row"><button class="btn soft grow" data-act="share">${ic('share','s')}${T('ev_invite')}</button><button class="btn line" data-act="report" data-kind="event" data-id="${e.id}" title="${T('report')}" aria-label="${T('report')}">${ic('flag','s')}</button>${e.who==='me'||S.admin?`<button class="btn line" data-act="delmeet" data-id="${e.id}" aria-label="${T('delete')}">${ic('trash','s')}</button>`:''}</div></div>`};
+ ${actBar('event',e.id,e.t,{mine:e.who==='me'||S.admin})}</div>`};
 };
 ACT.going=async d=>{
  if(gate())return;const e=S.meetups.find(x=>x.id===d.id);if(!e)return;
@@ -598,7 +583,7 @@ V.notifs=function(){return {t:T('notifs'),b:`<div class="stack"><div class="card
 
 /* ---------- community news ---------- */
 V.updates=function(){return {t:T('m_updates'),b:`<div class="stack">${(S.upd||[]).length?S.upd.map(u=>rowt('push','update',u.id,u.image_url?`<span class="th"><img class="art" src="${esc(u.image_url)}" alt=""></span>`:thmRaw('group',hueOf(u.id)),esc(u.title),ymd(u.created_at))).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_yet')}</p></div>`}</div>`}};
-V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T('m_updates'),b:''};return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span><h1 class="h1">${esc(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(u.body)}</p><div class="note g">${ic('info')}<div class="sm">${T('up_from')}</div></div><button class="btn soft block" data-act="share">${ic('share','s')}${T('share')}</button></div>`}};
+V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T('m_updates'),b:''};return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span><h1 class="h1">${esc(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(u.body)}</p><div class="note g">${ic('info')}<div class="sm">${T('up_from')}</div></div>${actBar('update',u.id,u.title,{})}</div>`}};
 
 /* ---------- reports ---------- */
 ACT.repsend=async()=>{
@@ -728,12 +713,115 @@ ACT.policy=d=>{S.stack[S.stack.length-1]={v:'policy',id:d.id};renderOv(false)};
 /* ---------- guides & updates: attribution and untouched content ---------- */
 const GM_SAFE=id=>MV[id]?MV[id]:['tag',hueOf(id)];
 
+
+/* ---------- social feed: posts, marketplace, meetups and news in one stream ---------- */
+N({
+ ff_posts:["Posts","Gönderiler","Wpisy","Записи"],ff_meet:["Meetups","Buluşmalar","Spotkania","Встречи"],ff_news:["News","Haberler","Aktualności","Новости"],
+ view_item:["View","Görüntüle","Zobacz","Открыть"],
+ link_copied:["Link copied","Bağlantı kopyalandı","Link skopiowany","Ссылка скопирована"]
+});
+function itemUrl(k,id){return location.origin+'/?i='+k+':'+id}
+const ilk=key=>(DB.il||{})[key]||{n:0,mine:false};
+function shareItem(k,id,text){
+ const url=itemUrl(k,id);
+ if(navigator.share){navigator.share({title:SITE_NAME,text:text||SITE_NAME,url}).catch(()=>{});return}
+ try{navigator.clipboard.writeText(url).then(()=>toast(T('link_copied')),()=>toast(url))}catch(e){toast(url)}
+}
+ACT.share=d=>{if(d&&d.k)shareItem(d.k,d.id,d.t);else copy(location.origin+'/')};
+const waLink=(k,id,text)=>'https://wa.me/?text='+encodeURIComponent((text||'').slice(0,120)+' — '+SITE_NAME+' '+itemUrl(k,id));
+function actBar(k,id,text,o){
+ o=o||{};const key=k+':'+id,lk=ilk(key),cm=(DB.ic||{})[key]||[],del={listing:'dellisting',event:'delmeet'}[k];
+ return `<div class="acts">
+  <button class="actb ${lk.mine?'on':''}" data-act="ilike" data-k="${k}" data-id="${id}" title="${T('like')}">${ic('heart')}<span>${lk.n}</span></button>
+  <button class="actb" data-act="icmt" data-k="${k}" data-id="${id}" title="${T('comment')}">${ic('msg')}<span>${cm.length||T('comment')}</span></button>
+  <button class="actb" data-act="share" data-k="${k}" data-id="${id}" data-t="${esc((text||'').slice(0,100))}" title="${T('share')}">${ic('share')}<span>${T('share')}</span></button>
+  <a class="actb" href="${waLink(k,id,text)}" target="_blank" rel="noopener" title="${T('whatsapp')}">${ic('wa')}<span>${T('whatsapp')}</span></a>
+  ${o.mine&&del?`<button class="actb" data-act="${del}" data-id="${id}" title="${T('delete')}" aria-label="${T('delete')}">${ic('trash')}</button>`:''}
+  <button class="actb" data-act="report" data-kind="${k}" data-id="${id}" title="${T('report')}">${ic('flag')}<span>${T('report')}</span></button>
+ </div>${S.cmt[key]?cmtBlock(key,k,id):''}`;
+}
+function cmtBlock(key,k,id){
+ const cm=(DB.ic||{})[key]||[];
+ return `<div class="cmts">${cm.map(c=>{const w=whoKey(c.author);return `<div class="cm">${av(w,30)}<div class="bub"><b>${esc((P[w]||{n:'Member'}).n)}</b> ${esc(c.body)}</div></div>`}).join('')}<div class="cform"><input id="ici-${k}-${id}" placeholder="${T('add_comment')}" maxlength="400"><button class="btn" data-act="icmtsend" data-k="${k}" data-id="${id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`;
+}
+ACT.ilike=async d=>{
+ if(gate())return;const key=d.k+':'+d.id,o=DB.il[key]||(DB.il[key]={n:0,mine:false}),was=o.mine;
+ o.mine=!was;o.n+=was?-1:1;renderMain();renderOv(true);
+ const r=was?await sb.from('item_likes').delete().eq('kind',d.k).eq('item_id',d.id).eq('user_id',S.uid):await sb.from('item_likes').insert({kind:d.k,item_id:d.id,user_id:S.uid});
+ if(r.error){o.mine=was;o.n+=was?1:-1;renderMain();renderOv(true);toast(r.error.message)}
+};
+ACT.icmt=d=>{const key=d.k+':'+d.id;S.cmt[key]=!S.cmt[key];renderMain();renderOv(true)};
+ACT.icmtsend=async d=>{
+ if(gate())return;const v=val('ici-'+d.k+'-'+d.id);if(!v)return;
+ const {data,error}=await sb.from('item_comments').insert({kind:d.k,item_id:d.id,author:S.uid,body:v}).select().single();
+ if(error)return toast(error.message);
+ const key=d.k+':'+d.id;(DB.ic[key]=DB.ic[key]||[]).push(data);renderMain();renderOv(true);
+};
+function fhead(who,at,pillIcon,pillText,org){
+ const w=who==='org'?{n:T('up_from'),org:1}:(P[who]||{n:'Member'});
+ const avh=who==='org'?`<span class="ring bz" style="--s:44px"><span class="av" style="--h:140">${ic('island')}</span></span>`:av(who);
+ return `<div class="ph">${avh}<div style="min-width:0"><b>${esc(w.n)}${w.biz?` <span class="pill" style="vertical-align:1px">${ic('vcheck','s')}${T('verified')}</span>`:''}</b><small>${ago(minsAgo(at))} · <span class="pill" style="vertical-align:1px">${ic(pillIcon,'s')}${pillText}</span></small></div></div>`;
+}
+function fcard(k,o){
+ if(k==='listing'){
+  const l=o,mine=l.who==='me'||S.admin;
+  return `<article class="card post">${fhead(l.who,l.at,'bag',T('mk_title'))}
+  <button class="btn0" style="display:block;width:100%;text-align:left;margin-top:12px;border:0;background:none;padding:0" data-act="push" data-v="listing" data-id="${l.id}"><div class="galw"><div class="gal"><div class="sl">${thumbFor(l)}</div></div></div><div style="margin-top:10px"><b style="font-size:17px;overflow-wrap:anywhere">${esc(l.t)}</b><div class="h2" style="color:var(--gd)">${l.price?money(l.price,l.cur):T('free')}</div><div class="sm mut">${ic('pin','s')} ${esc(l.area)}</div></div></button>
+  ${actBar('listing',l.id,l.t,{mine})}</article>`;
+ }
+ if(k==='event'){
+  const e=o,mine=e.who==='me'||S.admin,g=e.goingMe;
+  return `<article class="card post">${fhead(e.who,e.at,'cal',T('m_events'))}
+  <div style="margin-top:12px"><b style="font-size:17px;overflow-wrap:anywhere">${esc(e.t)}</b><div class="sm" style="margin-top:4px">${ic('cal','s')} ${fdate(e.starts.slice(0,10),1)} · ${new Date(e.starts).toLocaleTimeString(LOC[S.L],{hour:'2-digit',minute:'2-digit'})}</div>${e.where?`<div class="sm mut">${ic('pin','s')} ${esc(e.where)}</div>`:''}<div class="xs mut" style="margin-top:2px">${F('ev_who',{n:e.n})}</div></div>
+  <div class="row" style="margin-top:10px"><button class="btn grow ${g?'soft':''}" data-act="going" data-id="${e.id}">${ic(g?'check':'plus','s')}${g?T('going_on'):T('going')}</button><button class="btn soft" data-act="push" data-v="event" data-id="${e.id}">${T('view_item')}</button></div>
+  ${actBar('event',e.id,e.t,{mine})}</article>`;
+ }
+ const u=o;
+ return `<article class="card post">${fhead('org',u.created_at,'bell',T('m_updates'))}
+ <button class="btn0" style="display:block;width:100%;text-align:left;margin-top:12px;border:0;background:none;padding:0" data-act="push" data-v="update" data-id="${u.id}">${u.image_url?`<div class="galw" style="margin-bottom:10px"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<b style="font-size:17px;overflow-wrap:anywhere">${esc(u.title)}</b><div class="mut" style="margin-top:4px;overflow-wrap:anywhere">${esc(u.body.slice(0,160))}${u.body.length>160?'…':''}</div></button>
+ ${actBar('update',u.id,u.title,{})}</article>`;
+}
+function feedItems(){
+ const f=S.ff||'all',it=[];
+ if(f==='all'||f==='post')S.posts.filter(p=>!p.club).forEach(p=>it.push({k:'post',t:new Date(p.raw.created_at).getTime(),o:p}));
+ if(f==='all'||f==='listing')S.listings.forEach(l=>it.push({k:'listing',t:new Date(l.at).getTime(),o:l}));
+ if(f==='all'||f==='event')S.meetups.forEach(e=>it.push({k:'event',t:new Date(e.at).getTime(),o:e}));
+ if(f==='all'||f==='update')(S.upd||[]).forEach(u=>it.push({k:'update',t:new Date(u.created_at).getTime(),o:u}));
+ return it.sort((a,b)=>b.t-a.t);
+}
+function feedV(){
+ let h='<div class="stack">'+notes();
+ const ppl=Object.keys(P).filter(k=>k!=='me'&&!P[k].org).slice(0,5);
+ if(ppl.length)h+=`<section><h2 class="h3">${T('friends')}</h2><div class="leaves">`+ppl.map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+`<button class="leaf inv" data-act="invite"><span class="lf">${ic('plus')}</span><span class="n">${T('invite')}</span></button></div></section>`;
+ if(isM())h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="create" data-type="post">${av('me',40)}<span class="grow mut">${T('compose_ph')}</span>${ic('image','s')}</button>`;
+ h+=bannerHtml('feed');
+ const f=S.ff||'all';
+ h+=`<div class="chips">${[['all',T('all')],['post',T('ff_posts')],['listing',T('mk_title')],['event',T('ff_meet')],['update',T('ff_news')]].map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="ff" data-id="${c[0]}">${c[1]}</button>`).join('')}</div>`;
+ const list=feedItems();
+ if(!list.length)h+=`<div class="card" style="text-align:center"><p class="mut">${T('none_posts')}</p></div>`;
+ const lim=S.role==='visitor'?3:list.length;
+ list.slice(0,lim).forEach(x=>{h+=x.k==='post'?post(x.o):fcard(x.k,x.o)});
+ if(S.role==='visitor'&&list.length>lim)h+=`<div class="card" style="text-align:center"><h3 class="h2">${T('gate_t')}</h3><p class="mut" style="margin:6px 0 12px">${T('gate_d')}</p><button class="btn block" data-act="signup">${T('join_free')}</button></div>`;
+ else if(S.role!=='visitor'&&list.length)h+=`<div class="card" style="text-align:center"><div class="mark" style="margin:0 auto 8px;width:44px;height:44px">${ic('check','l')}</div><div class="mut">${T('caught')}</div><button class="btn soft" style="margin-top:12px" data-act="refresh">${ic('refresh','s')}${T('refresh')}</button></div>`;
+ return h+'</div>';
+}
+ACT.ff=d=>{S.ff=d.id;renderMain()};
+V.postd=function(o){const p=S.posts.find(x=>x.id===o.id);if(!p)return {t:T('cr_post'),b:`<p class="mut">${T('none_posts')}</p>`};S.cmt['p'+p.id]=true;return {t:T('cr_post'),b:`<div class="stack">${post(p)}</div>`}};
+function openDeepLink(){
+ const q=new URLSearchParams(location.search).get('i');if(!q)return;
+ const [k,id]=q.split(':');
+ try{history.replaceState(null,'',location.pathname)}catch(e){}
+ const v={post:'postd',listing:'listing',event:'event',update:'update'}[k];
+ if(v&&id)push(v,{id});
+}
+
 /* ---------- boot ---------- */
 (async function boot(){
  try{
   await Promise.all([loadStatic(),sb.auth.getSession()]);
   await sync({quiet:true});
   try{if(!localStorage.getItem('nc_soon')&&!S.uid&&!S.sheet){localStorage.setItem('nc_soon','1');openSheet({v:'soon'})}}catch(e){}
+  openDeepLink();
   const iv=new URLSearchParams(location.search).get('invite');
   if(iv&&!S.uid){S.su={step:1,type:'ind',dir:true,inv:iv};push('signup')}
  }catch(e){sbErr(e);render()}
