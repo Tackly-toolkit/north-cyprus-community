@@ -6,7 +6,7 @@
    ===================================================================== */
 const ADM={};
 const aok=async p=>{const r=await p;if(r.error){toast(r.error.message||'Error');throw r.error}return r.data};
-const aLog=(a,d)=>{try{sb.rpc('admin_log',{p_action:a,p_detail:d||{}})}catch(e){}};
+const aLog=(a,d)=>{try{sb.rpc('admin_log',{p_action:a,p_detail:d||{}}).then(()=>{},()=>{})}catch(e){}};
 const aBtn=(act,label,attrs,cls)=>{if(/^\s*(data-|aria-)/.test(label||'')&&!/^\s*(data-|aria-)/.test(attrs||'')){const t=label;label=attrs;attrs=t}return `<button class="btn ${cls||'soft'}" data-act="${act}" ${attrs||''}>${label}</button>`};
 const aTime=iso=>iso?new Date(iso).toLocaleString(LOC[S.L],{day:'numeric',month:'short',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
 const aDate=iso=>iso?new Date(iso).toLocaleDateString(LOC[S.L],{day:'numeric',month:'short',year:'numeric'}):'';
@@ -45,6 +45,7 @@ async function admLoad(sec,x){
   const [p,l,m]=await Promise.all([aok(sb.from('posts').select('id,author,body,created_at,club_id').order('created_at',{ascending:false}).limit(30)),aok(sb.from('listings').select('id,author,title,status,created_at').order('created_at',{ascending:false}).limit(30)),aok(sb.from('meetups').select('id,author,title,starts_at').order('created_at',{ascending:false}).limit(30))]);
   ADM.cp=p;ADM.cl=l;ADM.cm=m;await loadPeople([].concat(p.map(x=>x.author),l.map(x=>x.author),m.map(x=>x.author)));
  }
+ if(sec==='news'){ADM.news=await aok(sb.from('updates').select('*').order('created_at',{ascending:false}).limit(60))}
  if(sec==='payments'){ADM.pay=await aok(sb.from('payments').select('*,profiles(display_name)').order('created_at',{ascending:false}).limit(200))}
  if(sec==='audit'){ADM.audit=await aok(sb.from('audit_log').select('*').order('created_at',{ascending:false}).limit(80))}
  if(sec==='home'){ADM.sum=await aok(sb.rpc('admin_summary'))}
@@ -75,6 +76,7 @@ V.admin=function(){
  ${r('cats','Categories','Marketplace and directory categories','adm_cats')}
  ${r('lists','Dropdown lists','Condition, currency, handover','adm_lists')}
  ${r('clubs','Clubs','Add, rename, hide')}
+ ${r('news','Community news','Post updates members see on the feed')}
  ${r('content','Latest content','Remove posts, listings, meetups')}
  ${r('payments','Payments log','Every recorded payment')}
  ${r('settings','Settings','Free months, grace days, fee, contact details')}
@@ -152,14 +154,14 @@ V.adm_settings=function(){
  return {t:'Settings',b:`<div class="stack"><div class="card stack">
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-fm">Free months</label><input id="s-fm" type="number" min="0" value="${s.free_months}"></div><div><label class="f" for="s-gd">Days to pay after due date</label><input id="s-gd" type="number" min="0" value="${s.grace_days}"></div></div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-ft">Monthly fee (TL)</label><input id="s-ft" type="number" min="0" inputmode="decimal" value="${s.monthly_fee_try??''}"></div><div><label class="f" for="s-fg">Monthly fee (GBP, optional)</label><input id="s-fg" type="number" min="0" step="0.01" inputmode="decimal" value="${s.monthly_fee_gbp??''}"></div></div>
- <label class="f" for="s-ph">Contact phone (shown on the lock page)</label><input id="s-ph" value="${esc(s.contact_phone||'')}"><label class="f" for="s-em">Contact email (shown on the lock page)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
+ <label class="f" for="s-ph">Contact phone (shown on the lock page)</label><input id="s-ph" value="${esc(s.contact_phone||'')}"><label class="f" for="s-wa">WhatsApp number</label><input id="s-wa" value="${esc(s.contact_whatsapp||'')}"><label class="f" for="s-em">Contact email (shown on the lock page)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
  ${aBtn('asave',`${ic('check','s')}Save settings`,'','')}</div><p class="xs mut">Free months apply to people who sign up after you change them. Days to pay apply to everyone straight away.</p></div>`};
 };
 ACT.asave=async()=>{
  const n=id=>{const v=val(id);return v===''?null:Number(v)};
- const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:val('s-ph')||null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
+ const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:val('s-ph')||null,contact_whatsapp:val('s-wa')||null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
  await aok(sb.from('app_settings').update(row).eq('id',1));aLog('settings',row);
- DB.cfg.free_months=row.free_months;DB.cfg.grace_days=row.grace_days;DB.cfg.monthly_fee_try=row.monthly_fee_try;DB.cfg.monthly_fee_gbp=row.monthly_fee_gbp;DB.contact={phone:row.contact_phone||'',email:row.contact_email||''};
+ DB.cfg.free_months=row.free_months;DB.cfg.grace_days=row.grace_days;DB.cfg.monthly_fee_try=row.monthly_fee_try;DB.cfg.monthly_fee_gbp=row.monthly_fee_gbp;DB.contact={phone:row.contact_phone||'',email:row.contact_email||'',whatsapp:row.contact_whatsapp||''};
  toast('Saved');admReload();
 };
 
@@ -291,3 +293,18 @@ V.adm_payments=function(){
 V.adm_audit=function(){
  return {t:'Activity log',b:`<div class="stack">${(ADM.audit||[]).map(a=>`<div class="card"><b>${esc(a.action)}</b><div class="xs mut">${aTime(a.created_at)}</div><div class="xs" style="overflow-wrap:anywhere;margin-top:4px">${esc(JSON.stringify(a.detail||{}))}</div></div>`).join('')||'<p class="mut sm">Nothing yet.</p>'}</div>`};
 };
+
+/* ---------- community news ---------- */
+V.adm_news=function(){
+ const ns=ADM.news||[];
+ return {t:'Community news',b:`<div class="stack"><div class="card stack"><b>New update</b><label class="f" for="n-t">Title</label><input id="n-t" maxlength="120"><label class="f" for="n-b">Text</label><textarea id="n-b" maxlength="3000"></textarea><label class="f" for="n-i">Image (optional)</label><input id="n-i" type="file" accept="image/*">${aBtn('anewsadd',`${ic('check','s')}Publish`,'','')}</div>
+ ${ns.map(n=>`<div class="card stack" style="${n.published?'':'opacity:.55'}"><b style="overflow-wrap:anywhere">${esc(n.title)}</b><div class="xs mut">${aDate(n.created_at)}</div><div class="row" style="flex-wrap:wrap">${aBtn('anewstog',`data-id="${n.id}" data-v="${n.published?0:1}"`,n.published?'Hide':'Show')}${aBtn('anewsdel',`data-id="${n.id}"`,ic('trash','s'),'line')}</div></div>`).join('')}</div>`};
+};
+ACT.anewsadd=async()=>{
+ const t=val('n-t'),b=val('n-b');if(!t||!b)return toast('Add a title and text');
+ let img=null;const f=($('#n-i')||{}).files&&$('#n-i').files[0];
+ if(f){const d=await readImg(f);if(d)img=await uploadDataUrl(d,'news')}
+ await aok(sb.from('updates').insert({title:t,body:b,image_url:img}));aLog('news',{title:t});toast('Published');admReload();loadContent().then(()=>renderMain());
+};
+ACT.anewstog=async d=>{await aok(sb.from('updates').update({published:d.v==='1'}).eq('id',d.id));admReload();loadContent()};
+ACT.anewsdel=async d=>{await aok(sb.from('updates').delete().eq('id',d.id));admReload();loadContent()};
