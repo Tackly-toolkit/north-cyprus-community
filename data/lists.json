@@ -1,0 +1,60 @@
+{
+ "_note": "DRAFT for Chris to check. Every name, district and alternative spelling must be confirmed by Chris before launch.",
+ "districts": [
+  {"id":"girne","names":["Girne","Kyrenia","Kerynia"],"towns":[
+    {"id":"girne-centre","names":["Girne centre","Kyrenia centre"],"areas":["Harbour","Old town","Town centre","Yacht marina area","Ship Inn area"]},
+    {"id":"lapta","names":["Lapta","Lapithos"],"areas":["Lapta village","Lapta beach","Lapta hills"]},
+    {"id":"alsancak","names":["Alsancak","Karavas"],"areas":["Alsancak village","Alsancak seafront"]},
+    {"id":"catalkoy","names":["Çatalköy","Catalkoy","Agios Epiktitos"],"areas":["Çatalköy village","Çatalköy beach","Çatalköy hills"]},
+    {"id":"esentepe","names":["Esentepe","Agios Amvrosios"],"areas":["Esentepe village","Esentepe beach","Esentepe hills"]},
+    {"id":"karaoglanoglu","names":["Karaoğlanoğlu","Karaoglanoglu","Agios Georgios"],"areas":["Karaoğlanoğlu village","Karaoğlanoğlu seafront"]},
+    {"id":"ozankoy","names":["Ozanköy","Ozankoy","Kazafani"],"areas":["Ozanköy village","Ozanköy hills"]},
+    {"id":"bellapais","names":["Bellapais","Beylerbeyi"],"areas":["Bellapais village","Abbey area"]},
+    {"id":"other-girne","names":["Other, please tell us"],"areas":[]}
+  ]},
+  {"id":"lefkosa","names":["Lefkoşa","Nicosia","Lefkosia"],"towns":[
+    {"id":"lefkosa-centre","names":["Lefkoşa centre","Nicosia centre"],"areas":["Walled city","Town centre","Near Dereboyu"]},
+    {"id":"gonyeli","names":["Gönyeli","Gonyeli"],"areas":["Gönyeli centre","Yenikent area"]},
+    {"id":"alayköy","names":["Alayköy","Alaykoy"],"areas":["Alayköy village"]},
+    {"id":"other-lefkosa","names":["Other, please tell us"],"areas":[]}
+  ]},
+  {"id":"gazimagusa","names":["Gazimağusa","Famagusta","Mağusa","Magusa"],"towns":[
+    {"id":"magusa-centre","names":["Gazimağusa centre","Famagusta centre"],"areas":["Old town","Town centre","Near the university"]},
+    {"id":"other-gazimagusa","names":["Other, please tell us"],"areas":[]}
+  ]},
+  {"id":"iskele","names":["İskele","Iskele","Trikomo"],"towns":[
+    {"id":"iskele-centre","names":["İskele centre","Trikomo centre"],"areas":["Town centre"]},
+    {"id":"long-beach","names":["Long Beach","Long Beach area"],"areas":["Long Beach resort area"]},
+    {"id":"bogaz","names":["Boğaz","Bogaz"],"areas":["Boğaz harbour area"]},
+    {"id":"other-iskele","names":["Other, please tell us"],"areas":[]}
+  ]},
+  {"id":"guzelyurt","names":["Güzelyurt","Guzelyurt","Morphou"],"towns":[
+    {"id":"guzelyurt-centre","names":["Güzelyurt centre","Morphou centre"],"areas":["Town centre"]},
+    {"id":"lefke","names":["Lefke"],"areas":["Lefke centre"]},
+    {"id":"other-guzelyurt","names":["Other, please tell us"],"areas":[]}
+  ]}
+ ],
+ "market_categories": [
+  {"id":"home","name":"Home and furniture","sub":["Sofas and chairs","Tables","Beds and mattresses","Storage and wardrobes","Kitchen and appliances","Lighting and decor"]},
+  {"id":"garden","name":"Garden and outdoor","sub":["Garden furniture","Plants and pots","Tools","Pool and BBQ","Heating and cooling"]},
+  {"id":"electronics","name":"Electronics","sub":["Phones and tablets","Computers","TV and audio","Cameras","Gaming"]},
+  {"id":"clothing","name":"Clothing and baby","sub":["Women","Men","Children","Baby equipment","Shoes and bags"]},
+  {"id":"sport","name":"Sports and leisure","sub":["Bikes","Fitness","Water sports","Camping and walking","Musical instruments"]},
+  {"id":"books","name":"Books and media","sub":["Books in English","Books in other languages","Films and music","Games and puzzles"]},
+  {"id":"pets","name":"Pets and supplies","sub":["Pet supplies","Aquariums","Bird cages"]},
+  {"id":"free","name":"Free to a good home","sub":["Furniture","Household","Anything else"]}
+ ],
+ "directory_categories": [
+  {"id":"medical","name":"Medical and health","sub":["Doctors","Dentists","Pharmacies","Hospitals and clinics","Opticians","Physiotherapy"]},
+  {"id":"legal","name":"Legal and money","sub":["Lawyers","Accountants","Insurance","Translators","Banks"]},
+  {"id":"trades","name":"Home and trades","sub":["Plumbers","Electricians","Builders","Painters","Air conditioning","Cleaners","Removals"]},
+  {"id":"cars","name":"Cars and transport","sub":["Garages","Car hire","Taxis and transfers","Tyres and parts"]},
+  {"id":"food","name":"Food and drink","sub":["Restaurants","Cafes","Bakeries","Supermarkets"]},
+  {"id":"beauty","name":"Beauty and wellbeing","sub":["Hairdressers","Beauty salons","Gyms","Spas"]},
+  {"id":"pets-vets","name":"Pets and vets","sub":["Vets","Pet shops","Dog groomers","Pet boarding"]},
+  {"id":"education","name":"Education and services","sub":["Schools","Language lessons","Tutors","Post and couriers"]}
+ ],
+ "conditions":["New","Like new","Good","Fair","For parts"],
+ "currencies":["GBP £","EUR €","USD $","TRY ₺"],
+ "handover":["Collection only","Can deliver locally","Collection or delivery"]
+}
