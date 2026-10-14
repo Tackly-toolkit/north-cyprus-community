@@ -98,7 +98,7 @@ function post(p){
  const cms=S.cmt[k];
  const wa='https://wa.me/?text='+encodeURIComponent(A(p.txt).slice(0,120)+' — '+SITE_NAME+' '+itemUrl('post',p.id));
  return `<article class="card post"><div class="ph">${av(p.who)}<div style="min-width:0"><b>${esc(P0.n)}${P0.org||P0.biz?` <span class="pill" style="vertical-align:1px">${ic('vcheck','s')}${P0.org?T('staff'):T('verified')}</span>`:''}</b><small>${ago(p.m)} · ${ic(audI[p.aud],'s')} ${T(audK[p.aud])}${p.help?' · '+T('help_tag'):''}</small></div></div>
- <div class="txt">${esc(A(p.txt))}</div>${postMedia(p)}
+ <div class="txt">${esc(A(p.txt))}</div>${postMedia(p)}${p.ref?refCard(p.ref):''}
  <div class="acts">
   <button class="actb ${lk?'on':''}" data-act="like" data-id="${p.id}" title="${T('like')}">${ic('heart')}<span>${n}</span></button>
   <button class="actb" data-act="cmt" data-id="${p.id}" title="${T('comment')}">${ic('msg')}<span>${p.cm.length||T('comment')}</span></button>
