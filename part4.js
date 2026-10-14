@@ -9,7 +9,7 @@ const SB_KEY='__ANON_KEY__';
 const SITE_NAME='North Cyprus Community';
 const SITE_SHORT='North Cyprus';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-const DB={geo:[],cats:[],lists:{condition:[],currency:[],handover:[]},cfg:{signup_mode:'open',free_months:3,grace_days:4},contact:{phone:'',email:''},clubs:[],banners:[]};
+const DB={geo:[],cats:[],lists:{condition:[],currency:[],handover:[],bedrooms:[],furnished:[]},cfg:{signup_mode:'open',free_months:3,grace_days:4},contact:{phone:'',email:''},clubs:[],banners:[]};
 
 /* demo people are not part of the real platform */
 Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
@@ -20,6 +20,7 @@ N({
  aud_members:["Members","Üyeler","Członkowie","Участники"],
  nav_market:["Marketplace","Pazar","Targ","Барахолка"],
  mk_title:["Community marketplace","Topluluk pazarı","Targ społeczności","Рынок сообщества"],
+ per_month:["month","ay","miesiąc","месяц"],cr_beds:["Bedrooms","Yatak odası","Sypialnie","Спальни"],cr_furn:["Furnishing","Eşya durumu","Umeblowanie","Мебель"],cr_rent_n:["Enter the monthly rent in the price box.","Aylık kirayı fiyat kutusuna yazın.","Wpisz miesięczny czynsz w polu ceny.","Укажите месячную аренду в поле цены."],
  mk_note:["Deals are between members. Meet in a public place, check items before you pay, and pay in person. We never handle money.","Anlaşmalar üyeler arasındadır. Herkese açık bir yerde buluşun, ödemeden önce ürünü kontrol edin ve elden ödeyin. Biz hiçbir zaman para almayız.","Transakcje odbywają się między członkami. Spotkajcie się w publicznym miejscu, sprawdźcie rzecz przed zapłatą i płaćcie osobiście. Nigdy nie obsługujemy pieniędzy.","Сделки совершаются между участниками. Встречайтесь в людном месте, проверяйте вещь до оплаты и платите на месте. Мы никогда не принимаем деньги."],
  dir_sub:["Local businesses, listed by area.","Yerel işletmeler, bölgeye göre.","Lokalne firmy według okolicy.","Местные компании по районам."],
  g_demo:["Starter guide, written by the community. Always check official sources before you act.","Topluluk tarafından yazılmış başlangıç rehberi. İşlem yapmadan önce resmi kaynakları kontrol edin.","Poradnik startowy napisany przez społeczność. Zawsze sprawdzaj oficjalne źródła.","Стартовый гид, написанный сообществом. Всегда проверяйте официальные источники."],
@@ -154,6 +155,7 @@ const subSel=(pfx,kids,v)=>`<label class="f" for="${pfx}-s">${T('cr_sub')}</labe
 document.addEventListener('change',e=>{
  const el=e.target;if(!el.dataset||!el.dataset.cat)return;
  const pfx=el.dataset.cat,o=$('#'+pfx+'-co'),w=$('#'+pfx+'-sw');
+ if(pfx==='c-m'){const pr=/^market-(rent|sale)$/.test(el.value),px=$('#prop-x'),sx=$('#std-x'),rn=$('#rent-n');if(px){px.hidden=!pr;sx.hidden=pr;rn.hidden=el.value!=='market-rent'}}
  if(o)o.hidden=el.value!=='__other';
  if(w){const k=el.value&&el.value!=='__other'?cKids(el.value):[];w.innerHTML=k.length?subSel(pfx,k,''):''}
 });
@@ -195,7 +197,7 @@ async function loadStatic(){
   sb.from('clubs').select('*').eq('active',true).order('created_at')
  ]);
  DB.geo=g.data||[];DB.cats=c.data||[];
- DB.lists={condition:[],currency:[],handover:[]};
+ DB.lists={condition:[],currency:[],handover:[],bedrooms:[],furnished:[]};
  (l.data||[]).forEach(r=>{(DB.lists[r.kind]=DB.lists[r.kind]||[]).push(r.value)});
  if(cfg.data)DB.cfg=cfg.data;
  const row=Array.isArray(ct.data)?ct.data[0]:ct.data;
@@ -207,12 +209,12 @@ function mapPost(r){
  if(mine)S.liked['p'+r.id]=true;else delete S.liked['p'+r.id];
  return {id:r.id,who:whoKey(r.author),m:minsAgo(r.created_at),aud:r.audience,txt:r.body,likes:likes.length-(mine?1:0),
   cm:(r.post_comments||[]).sort((a,b)=>a.created_at<b.created_at?-1:1).map(c=>[whoKey(c.author),c.body]),help:r.help,
-  up:r.media_url?{img:r.media_url}:null,club:r.club_id,raw:r};
+  up:r.media_url?{img:r.media_url}:null,club:r.club_id,ref:r.ref_kind?{k:r.ref_kind,id:r.ref_id}:null,raw:r};
 }
 function mapListing(r){
  const sub=cById(r.category_id),top=sub&&sub.parent_id?cById(sub.parent_id):sub;
  return {id:r.id,t:r.title,d:r.description,price:Number(r.price),cur:r.currency,cat:r.category_id,catTop:top?top.id:'',catName:sub?(top&&sub.parent_id?top.name+' · '+sub.name:sub.name):'',
-  who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,at:r.created_at,status:r.status,ic:'tag'};
+  who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,per:r.period,beds:r.bedrooms,furn:r.furnished,prop:/^market-(rent|sale)/.test(r.category_id||''),imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,at:r.created_at,status:r.status,ic:'tag'};
 }
 function mapDir(r){
  return {id:r.id,n:r.name,cat:r.category_id,catName:cName(r.category_id),area:areaLabel(r.district_id,r.town_id,r.area_id),district:r.district_id,addr:r.address||'',off:r.offer||'',ver:r.verified?1:0,status:r.status,who:whoKey(r.owner),img:r.photo_url||'',k:r.name};
@@ -223,7 +225,7 @@ function mapMeet(r){
 async function loadContent(){
  const now=new Date();
  const q=[
-  sb.from('posts').select('id,author,body,audience,help,media_url,created_at,club_id,post_likes(user_id),post_comments(id,author,body,created_at)').order('created_at',{ascending:false}).limit(60),
+  sb.from('posts').select('id,author,body,audience,help,media_url,created_at,club_id,ref_kind,ref_id,post_likes(user_id),post_comments(id,author,body,created_at)').order('created_at',{ascending:false}).limit(60),
   sb.from('listings').select('*').eq('status','active').gt('expires_at',now.toISOString()).order('created_at',{ascending:false}).limit(120),
   sb.from('directory').select('*').order('name'),
   sb.from('meetups').select('*,meetup_going(user_id)').gte('starts_at',new Date(now-864e5).toISOString()).order('starts_at'),
@@ -232,23 +234,26 @@ async function loadContent(){
   sb.rpc('club_counts'),
   sb.from('updates').select('*').order('created_at',{ascending:false}).limit(40),
   sb.from('item_likes').select('kind,item_id,user_id'),
-  sb.from('item_comments').select('*').order('created_at').limit(500)
+  sb.from('item_comments').select('*').order('created_at').limit(500),
+  S.uid?sb.from('friendships').select('*'):Promise.resolve({data:[]})
  ];
  if(S.uid)q.push(sb.from('messages').select('*').or('to_id.eq.'+S.uid+',from_id.eq.'+S.uid).order('created_at',{ascending:false}).limit(80));
- const [pq,lq,dq,mq,bq,cq,nq,uq,lkq,ccq,iq]=await Promise.all(q);S.upd=uq.data||[];
+ const [pq,lq,dq,mq,bq,cq,nq,uq,lkq,ccq,frq,iq]=await Promise.all(q);
+ S.frs=frq.data||[];S.upd=uq.data||[];
  DB.il={};DB.ic={};
  (lkq.data||[]).forEach(x=>{const k=x.kind+':'+x.item_id,o=DB.il[k]||(DB.il[k]={n:0,mine:false});o.n++;if(x.user_id===S.uid)o.mine=true});
  (ccq.data||[]).forEach(x=>{(DB.ic[x.kind+':'+x.item_id]=DB.ic[x.kind+':'+x.item_id]||[]).push(x)});
  const posts=pq.data||[],ls=lq.data||[],dr=dq.data||[],ms=mq.data||[];
  S.msgs=iq?iq.data||[]:[];
- await loadPeople([].concat(posts.map(p=>p.author),posts.flatMap(p=>(p.post_comments||[]).map(c=>c.author)),ls.map(l=>l.author),dr.map(d=>d.owner),ms.map(m=>m.author),(ccq.data||[]).map(c=>c.author),S.msgs.flatMap(m=>[m.from_id,m.to_id])));
+ await loadPeople([].concat(posts.map(p=>p.author),posts.flatMap(p=>(p.post_comments||[]).map(c=>c.author)),ls.map(l=>l.author),dr.map(d=>d.owner),ms.map(m=>m.author),(ccq.data||[]).map(c=>c.author),S.frs.flatMap(f=>[f.requester,f.addressee]),S.msgs.flatMap(m=>[m.from_id,m.to_id])));
  S.posts=posts.map(mapPost);S.listings=ls.map(mapListing);S.dir=dr.map(mapDir);S.meetups=ms.map(mapMeet);
  S.verified=S.dir.some(b=>b.who==='me'&&b.ver);
  DB.banners=bq.data||[];
- S.unread=S.msgs.filter(m=>m.to_id===S.uid&&!m.read).length;
+ S.unread=S.msgs.filter(m=>m.to_id===S.uid&&!m.read).length+frIn().length;
  S.joined={};DB.clubCount={};
  (cq.data||[]).forEach(x=>{S.joined[x.club_id]=true});
  (nq.data||[]).forEach(x=>{DB.clubCount[x.club_id]=Number(x.n)});
+ S.cl=1;
 }
 
 /* ---------- session / account state ---------- */
@@ -461,22 +466,23 @@ function footerV(){
 }
 
 /* ---------- Community marketplace ---------- */
+const lmoney=l=>l.price?money(l.price,l.cur)+(l.per==='month'?' / '+T('per_month'):''):T('free');
 function thumbFor(l){return l.img?`<img class="art" src="${esc(l.img)}" alt="">`:art('tag',hueOf(l.id),0,l.t)}
 function marketV(){
  const top=cTop('market'),cur=S.mcat==='all'||!top.some(c=>c.id===S.mcat)?'all':S.mcat;
  const ls=S.listings.filter(l=>cur==='all'||l.catTop===cur);
  return `<div class="stack">${notes()}<div class="row"><h1 class="h1 grow">${T('mk_title')}</h1><button class="btn out" data-act="create" data-type="listing">${ic('plus','s')}${T('sell')}</button></div>
  <div class="chips"><button class="chip ${cur==='all'?'on':''}" data-act="mcat" data-id="all">${T('all')}</button>${top.map(c=>`<button class="chip ${cur===c.id?'on':''}" data-act="mcat" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div>${bannerHtml('market')}
- ${ls.length?`<div class="grid2">${ls.map(l=>`<button class="tile" data-act="push" data-v="listing" data-id="${l.id}"><span class="pic">${thumbFor(l)}<span class="pr">${l.price?money(l.price,l.cur):T('free')}</span></span><span class="tb"><b>${esc(l.t)}</b><span class="xs mut">${esc(l.area)}</span></span></button>`).join('')}</div>`:`<div class="card" style="text-align:center"><p class="mut">${T('none_listings')}</p></div>`}
+ ${ls.length?`<div class="grid2">${ls.map(l=>`<button class="tile" data-act="push" data-v="listing" data-id="${l.id}"><span class="pic">${thumbFor(l)}<span class="pr">${lmoney(l)}</span></span><span class="tb"><b>${esc(l.t)}</b><span class="xs mut">${esc(l.area)}</span></span></button>`).join('')}</div>`:`<div class="card" style="text-align:center"><p class="mut">${T('none_listings')}</p></div>`}
  <div class="note g">${ic('info')}<div class="sm">${T('mk_note')}</div></div></div>`;
 }
 V.listing=function(o){
  const l=S.listings.find(x=>x.id===o.id);if(!l)return {t:T('nav_market'),b:''};
  const w=P[l.who]||{n:'Member',h:150},mine=l.who==='me';
  const gal2=l.imgs.length?`<div class="galw"><div class="gal">${l.imgs.map(u=>`<div class="sl"><img class="art" src="${esc(u)}" alt=""></div>`).join('')}</div>${l.imgs.length>1?`<span class="gc">1/${l.imgs.length}</span>`:''}</div>`:`<div class="galw"><div class="gal"><div class="sl">${art('tag',hueOf(l.id),0,l.t)}</div></div></div>`;
- return {t:T('mk_title'),b:`<div class="stack"><div>${gal2}</div><div><span class="pill">${esc(l.catName)}</span><h1 class="h1" style="margin-top:8px">${esc(l.t)}</h1><div class="h2" style="color:var(--gd);margin-top:4px">${l.price?money(l.price,l.cur):T('free')}</div></div><p>${esc(l.d)}</p>
+ return {t:T('mk_title'),b:`<div class="stack"><div>${gal2}</div><div><span class="pill">${esc(l.catName)}</span><h1 class="h1" style="margin-top:8px">${esc(l.t)}</h1><div class="h2" style="color:var(--gd);margin-top:4px">${lmoney(l)}</div></div><p>${esc(l.d)}</p>
  ${actBar('listing',l.id,l.t,{})}
- <div class="card stack">${l.cond?`<div class="row"><span class="grow mut">${T('cr_cond')}</span><b>${esc(l.cond)}</b></div>`:''}${l.hand?`<div class="row"><span class="grow mut">${T('cr_hand')}</span><b>${esc(l.hand)}</b></div>`:''}
+ <div class="card stack">${l.beds?`<div class="row"><span class="grow mut">${T('cr_beds')}</span><b>${esc(l.beds)}</b></div>`:''}${l.furn?`<div class="row"><span class="grow mut">${T('cr_furn')}</span><b>${esc(l.furn)}</b></div>`:''}${l.cond?`<div class="row"><span class="grow mut">${T('cr_cond')}</span><b>${esc(l.cond)}</b></div>`:''}${l.hand?`<div class="row"><span class="grow mut">${T('cr_hand')}</span><b>${esc(l.hand)}</b></div>`:''}
  <div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('address')}</div><b>${esc(l.area)}</b></div></div><a class="btn soft block" href="${mapsUrl(l.area)}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a><div class="xs mut">${F('expires_on',{d:ymd(l.exp)})}</div></div>
  <button class="listrow" data-act="push" data-v="person" data-id="${l.who}">${av(l.who,44)}<span class="grow"><span class="xs mut">${T('sold_by')}</span><b>${esc(w.n)}</b></span>${ic('right')}</button>
  ${mine?`<div class="row"><button class="btn soft grow" data-act="sold" data-id="${l.id}">${ic('check','s')}${T('mark_sold')}</button><button class="btn line grow" data-act="dellisting" data-id="${l.id}">${ic('trash','s')}${T('delete')}</button></div>`:`<button class="btn block" data-act="msg" data-to="${esc(w.n)}" data-uid="${l.who}" data-about="${esc(l.t)}">${ic('msg','s')}${T('msg_seller')}</button>
@@ -550,9 +556,36 @@ ACT.joinclub=async d=>{
 /* ---------- people, messages ---------- */
 V.person=function(o){
  const p=P[o.id]||{n:'Member',i:'?',h:150};const ps=S.posts.filter(x=>x.who===o.id&&!x.club),ls=S.listings.filter(x=>x.who===o.id);
- return {t:esc(p.n),b:`<div class="stack"><div class="card" style="text-align:center">${av(o.id,84)}<h1 class="h2" style="margin-top:10px">${esc(p.n)}</h1><div class="mut sm">${esc(p.area||'')}</div>${o.id!=='me'?`<button class="btn" style="margin-top:12px" data-act="msg" data-to="${esc(p.n)}" data-uid="${o.id}" data-pre="${esc(T('hello_msg'))}">${ic('msg','s')}${T('hello')}</button><button class="btn line" style="margin-top:8px" data-act="report" data-kind="seller" data-id="${o.id}">${ic('flag','s')}${T('report_seller')}</button>`:''}</div>
- ${ls.length?`<h2 class="h3">${T('mk_title')}</h2><div class="grid2">${ls.map(l=>`<button class="tile" data-act="push" data-v="listing" data-id="${l.id}"><span class="pic">${thumbFor(l)}<span class="pr">${l.price?money(l.price,l.cur):T('free')}</span></span><span class="tb"><b>${esc(l.t)}</b></span></button>`).join('')}</div>`:''}${ps.map(post).join('')}</div>`};
+ const st=frState(o.id);
+ const fb={none:`<button class="btn" data-act="frreq" data-id="${o.id}">${ic('plus','s')}${T('fr_add')}</button>`,sent:`<button class="btn soft" data-act="frdel" data-id="${o.id}">${ic('check','s')}${T('fr_sent')} · ${T('fr_cancel')}</button>`,incoming:`<div class="row" style="justify-content:center"><button class="btn" data-act="fracc" data-id="${o.id}">${ic('check','s')}${T('fr_accept')}</button><button class="btn line" data-act="frdel" data-id="${o.id}">${T('fr_decline')}</button></div>`,friends:`<span class="pill">${ic('check','s')}${T('fr_friends')}</span>`,me:''}[st];
+ return {t:esc(p.n),b:`<div class="stack"><div class="card" style="text-align:center">${av(o.id,84)}<h1 class="h2" style="margin-top:10px">${esc(p.n)}</h1><div class="mut sm">${esc(p.area||'')}</div>${st==='me'?`<p class="sm mut" style="margin-top:8px">${T('profile_note')}</p>`:`<div class="stack" style="margin-top:12px;justify-items:center">${isM()?fb:`<button class="btn" data-act="signup">${T('join_free')}</button>`}<div class="row" style="flex-wrap:wrap;justify-content:center"><button class="btn soft" data-act="msg" data-to="${esc(p.n)}" data-uid="${o.id}" data-pre="${esc(T('hello_msg'))}">${ic('msg','s')}${T('hello')}</button>${st==='friends'?`<button class="btn line" data-act="frdel" data-id="${o.id}">${T('fr_remove')}</button>`:''}<button class="btn line" data-act="report" data-kind="seller" data-id="${o.id}" aria-label="${T('report_seller')}">${ic('flag','s')}</button></div></div>`}</div>
+ ${ls.length?`<h2 class="h3">${T('mk_title')}</h2><div class="grid2">${ls.map(l=>`<button class="tile" data-act="push" data-v="listing" data-id="${l.id}"><span class="pic">${thumbFor(l)}<span class="pr">${lmoney(l)}</span></span><span class="tb"><b>${esc(l.t)}</b></span></button>`).join('')}</div>`:''}${ps.map(post).join('')}</div>`};
 };
+N({profile_note:["This is your profile. What you share here also appears on the home feed.","Burası profilin. Burada paylaştıkların ana akışta da görünür.","To Twój profil. To, co tu udostępniasz, pojawia się też w aktualnościach.","Это ваш профиль. Всё, чем вы делитесь здесь, появляется и в общей ленте."]});
+ACT.frreq=async d=>{if(gate())return;const {error}=await sb.from('friendships').insert({requester:S.uid,addressee:d.id,status:'pending'});if(error)return toast(error.message);await reloadFriends();renderOv(true);renderMain()};
+ACT.fracc=async d=>{const f=(S.frs||[]).find(x=>x.requester===d.id&&x.addressee===S.uid);if(!f)return;const {error}=await sb.from('friendships').update({status:'accepted',responded_at:new Date().toISOString()}).eq('id',f.id);if(error)return toast(error.message);await reloadFriends();renderOv(true);renderMain()};
+ACT.frdel=async d=>{const f=(S.frs||[]).find(x=>x.requester===d.id||x.addressee===d.id);if(!f)return;const {error}=await sb.from('friendships').delete().eq('id',f.id);if(error)return toast(error.message);await reloadFriends();renderOv(true);renderMain()};
+V.friends=function(){
+ const inc=frIn(),out=frOut(),fr=frAcc();
+ const prow=(id,right)=>`<div class="card row">${av(id,44)}<button class="grow" style="border:0;background:none;text-align:left;min-width:0" data-act="push" data-v="person" data-id="${id}"><b>${esc((P[id]||{n:'Member'}).n)}</b><div class="xs mut">${esc((P[id]||{}).area||'')}</div></button>${right||''}</div>`;
+ return {t:T('fr_title'),b:`<div class="stack">
+ <div class="card stack"><b>${T('fr_find')}</b><input id="fq" type="search" placeholder="${esc(T('fr_find_ph'))}" autocomplete="off"><div id="fres" class="stack"></div></div>
+ <h2 class="h3">${T('fr_reqs')}${inc.length?` · ${inc.length}`:''}</h2>${inc.length?inc.map(f=>prow(f.requester,`<button class="btn" data-act="fracc" data-id="${f.requester}">${T('fr_accept')}</button><button class="btn line" data-act="frdel" data-id="${f.requester}" aria-label="${T('fr_decline')}">${ic('x','s')}</button>`)).join(''):`<p class="mut sm">${T('fr_noreq')}</p>`}
+ <h2 class="h3">${T('fr_yours')}${fr.length?` · ${fr.length}`:''}</h2>${fr.length?fr.map(f=>prow(frOther(f))).join(''):`<p class="mut sm">${T('fr_none')}</p>`}
+ ${out.length?`<h2 class="h3">${T('fr_pending')}</h2>${out.map(f=>prow(f.addressee,`<button class="btn line" data-act="frdel" data-id="${f.addressee}">${T('fr_cancel')}</button>`)).join('')}`:''}</div>`};
+};
+let fqT=null;
+document.addEventListener('input',e=>{
+ if(e.target.id!=='fq')return;
+ clearTimeout(fqT);const q=e.target.value.trim();
+ fqT=setTimeout(async()=>{
+  const el=$('#fres');if(!el)return;
+  if(q.length<2){el.innerHTML='';return}
+  const {data}=await sb.from('people').select('*').ilike('display_name','%'+q.replace(/[%_]/g,'')+'%').neq('id',S.uid).limit(20);
+  (data||[]).forEach(r=>{P[r.id]=mkPerson(r)});
+  el.innerHTML=(data||[]).length?data.map(r=>{const st=frState(r.id);return `<div class="row">${av(r.id,40)}<button class="grow" style="border:0;background:none;text-align:left;min-width:0" data-act="push" data-v="person" data-id="${r.id}"><b>${esc(P[r.id].n)}</b><div class="xs mut">${esc(P[r.id].area||'')}</div></button>${st==='none'?`<button class="btn soft" data-act="frreq" data-id="${r.id}">${T('fr_add')}</button>`:`<span class="pill">${T(st==='friends'?'fr_friends':st==='sent'?'fr_sent':'fr_reqs')}</span>`}</div>`}).join(''):`<p class="mut sm">${T('fr_noresult')}</p>`;
+ },250);
+});
 SH.msg=s=>`<h2 class="h2">${esc(s.to)}</h2><div class="stack" style="margin-top:12px">${s.about?`<div class="xs mut">${esc(s.about)}</div>`:''}<textarea id="mt" maxlength="600" aria-label="${T('send')}">${esc(s.pre||T('msg_ph'))}</textarea><button class="btn block" data-act="msgsend">${ic('send','s')}${T('send')}</button></div>`;
 ACT.msg=d=>{if(gate())return;openSheet({v:'msg',to:d.to,uid:d.uid,pre:d.pre,about:d.about})};
 ACT.msgsend=async()=>{
@@ -565,7 +598,7 @@ ACT.msgsend=async()=>{
 V.inbox=function(){
  const th={};(S.msgs||[]).forEach(m=>{const o=m.from_id===S.uid?m.to_id:m.from_id;(th[o]=th[o]||[]).push(m)});
  const keys=Object.keys(th);
- return {t:T('inbox'),b:`<div class="stack">${keys.length?keys.map(k=>{const last=th[k][0],p=P[k]||{n:'Member'};return `<button class="listrow" data-act="push" data-v="thread" data-id="${k}">${av(k,44)}<span class="grow"><b>${esc(p.n)}</b><span class="xs mut" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(last.body)}</span></span>${th[k].some(m=>m.to_id===S.uid&&!m.read)?'<span class="pill red">•</span>':ic('right')}</button>`}).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('inbox_none')}</p></div>`}</div>`};
+ return {t:T('inbox'),b:`<div class="stack">${frIn().length?`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="friends"><span class="lf" style="background:var(--rs);color:var(--r);width:46px;height:46px">${ic('users')}</span><div class="grow"><b>${T('fr_reqs')}</b></div><span class="pill red">${frIn().length}</span></button>`:''}${keys.length?keys.map(k=>{const last=th[k][0],p=P[k]||{n:'Member'};return `<button class="listrow" data-act="push" data-v="thread" data-id="${k}">${av(k,44)}<span class="grow"><b>${esc(p.n)}</b><span class="xs mut" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(last.body)}</span></span>${th[k].some(m=>m.to_id===S.uid&&!m.read)?'<span class="pill red">•</span>':ic('right')}</button>`}).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('inbox_none')}</p></div>`}</div>`};
 };
 V.thread=function(o){
  const p=P[o.id]||{n:'Member'},ms=(S.msgs||[]).filter(m=>m.from_id===o.id||m.to_id===o.id).slice().reverse();
@@ -613,6 +646,7 @@ function meV(){
   h+=notes();
   h+=`<div class="card"><div class="row">${av('me',64)}<div class="grow"><h2 class="h2">${esc(P.me.n)}</h2><div class="mut sm">${esc(P.me.area||'')}</div><label class="btn soft" for="c-pf" style="margin-top:8px;display:inline-flex">${ic('image','s')}${T('chg_photo')}</label><input id="c-pf" type="file" accept="image/*" class="pfx"><div style="margin-top:6px"><span class="pill">${ic('lock','s')}${T('me_acct')}: ${T(biz?'su_biz':'su_ind')}</span></div></div></div></div>`;
   h+=acctCard();
+  h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="person" data-id="me">${av('me',46)}<div class="grow"><b>${T('my_profile')}</b></div>${ic('right')}</button><button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="friends"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('users')}</span><div class="grow"><b>${T('fr_title')}</b><div class="sm mut">${frAcc().length}</div></div>${frIn().length?`<span class="pill red">${frIn().length}</span>`:ic('right')}</button>`;
   h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="inbox"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('msg')}</span><div class="grow"><b>${T('inbox')}</b></div>${S.unread?`<span class="pill red">${S.unread}</span>`:ic('right')}</button>`;
   if(S.admin)h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="admin"><span class="lf" style="background:var(--rs);color:var(--r);width:46px;height:46px">${ic('shield')}</span><div class="grow"><b>${T('admin_t')}</b></div>${ic('right')}</button>`;
   const sv=Object.keys(S.saved).filter(k=>S.saved[k]);
@@ -653,10 +687,10 @@ SH.create=function(s){
   help:`<textarea id="c-x" maxlength="1500" placeholder="${T('cr_text')}" aria-label="${T('cr_text')}"></textarea>${MF2(1)}<p class="xs mut" style="margin-top:6px">${T('cr_help_note')}</p>`,
   listing:`${MF2(4)}<label class="f" for="c-t">${T('cr_title')}</label><input id="c-t" maxlength="80"><label class="f" for="c-d">${T('cr_desc')}</label><textarea id="c-d" maxlength="400" style="min-height:80px"></textarea>
    <div class="grid2" style="gap:10px"><div><label class="f" for="c-p">${T('cr_price')}</label><input id="c-p" type="number" inputmode="decimal" min="0"></div><div>${listSel('c-cur',T('cr_cur'),'currency',(DB.lists.currency||[]).find(x=>/TRY/.test(x)))}</div></div>
-   ${catSel('c-m','market',{})}${listSel('c-cond',T('cr_cond'),'condition')}${listSel('c-hand',T('cr_hand'),'handover')}<div class="card" style="margin-top:12px"><b>${T('cr_addr')}</b>${geoSel('lg',{d:pf.district_id,t:pf.town_id,a:pf.area_id})}</div>`,
+   ${catSel('c-m','market',{})}<div id="std-x">${listSel('c-cond',T('cr_cond'),'condition')}${listSel('c-hand',T('cr_hand'),'handover')}</div><div id="prop-x" hidden>${listSel('c-beds',T('cr_beds'),'bedrooms')}${listSel('c-furn',T('cr_furn'),'furnished')}<p class="xs mut" id="rent-n" style="margin-top:6px">${T('cr_rent_n')}</p></div><div class="card" style="margin-top:12px"><b>${T('cr_addr')}</b>${geoSel('lg',{d:pf.district_id,t:pf.town_id,a:pf.area_id})}</div>`,
   meetup:`<label class="f" for="c-t">${T('cr_title')}</label><input id="c-t" maxlength="80"><div class="grid2" style="gap:10px"><div><label class="f" for="c-dt">${T('cr_when_d')}</label><input id="c-dt" type="date" min="${today}"></div><div><label class="f" for="c-tm">${T('cr_when_t')}</label><select id="c-tm">${Array.from({length:36},(_,i)=>{const m=6*60+i*30,hh=String(Math.floor(m/60)).padStart(2,'0'),mm=String(m%60).padStart(2,'0');return `<option value="${hh}:${mm}" ${hh+':'+mm==='10:00'?'selected':''}>${hh}:${mm}</option>`}).join('')}</select></div></div><div class="card" style="margin-top:12px"><b>${T('cr_where')}</b>${geoSel('lg',{d:pf.district_id,t:pf.town_id,a:pf.area_id})}<label class="f" for="c-ad">${T('address')}</label><input id="c-ad" maxlength="120"></div>`})[t];
  const showAud=(t==='post'||t==='help')&&!s.club;
- return `<div class="row" style="margin-bottom:8px"><button class="ib" data-act="crback" aria-label="${T('back')}">${ic('left')}</button><h2 class="h2">${T(({post:'cr_post',listing:'cr_listing',meetup:'cr_meetup',help:'cr_help'})[t])}</h2></div>${f}${showAud?`<label class="f">${T('audience')}</label><div class="seg" id="aud">${['public','members'].map(a=>`<button class="${au===a?'on':''}" data-act="aud" data-id="${a}">${ic(audI[a],'s')}${T(audK[a])}</button>`).join('')}</div>`:''}<button class="btn block" style="margin-top:16px" data-act="crpub">${T('cr_pub')}</button>`;
+ return `<div class="row" style="margin-bottom:8px"><button class="ib" data-act="crback" aria-label="${T('back')}">${ic('left')}</button><h2 class="h2">${T(({post:'cr_post',listing:'cr_listing',meetup:'cr_meetup',help:'cr_help'})[t])}</h2></div>${f}${showAud?`<label class="f">${T('audience')}</label><div class="seg" id="aud">${['public','members','friends'].map(a=>`<button class="${au===a?'on':''}" data-act="aud" data-id="${a}">${ic(audI[a],'s')}${T(audK[a])}</button>`).join('')}</div>`:''}<button class="btn block" style="margin-top:16px" data-act="crpub">${T('cr_pub')}</button>`;
 };
 ACT.create=d=>{if(gate())return;S.cr={aud:'public',imgs:[],club:d.club||null};openSheet({v:'create',type:d.type||null,club:d.club||null})};
 ACT.crtype=d=>{S.sheet.type=d.id;S.cr.imgs=[];S.cr.img='';renderSheet()};
@@ -675,7 +709,7 @@ ACT.crpub=async function(){
    const ti=val('c-t'),de=val('c-d'),g=geoVals('lg'),cat=$('#c-m-c').value,sub=($('#c-m-s')||{}).value||'';
    if(!ti||!de||!cat||!g.d){toast(T('cr_need'));throw 0}
    const catId=cat==='__other'?null:(sub||cat);
-   const {error}=await sb.from('listings').insert({author:S.uid,title:ti,description:de,price:+val('c-p')||0,currency:val('c-cur')||'TRY',category_id:catId,condition:val('c-cond'),handover:val('c-hand'),district_id:g.d,town_id:g.t==='__other'?null:(g.t||null),area_id:g.a==='__other'?null:(g.a||null),photos:urls});if(error)throw error;
+   const {error}=await sb.from('listings').insert({author:S.uid,title:ti,description:de,price:+val('c-p')||0,currency:val('c-cur')||'TRY',category_id:catId,...(/^market-(rent|sale)$/.test(cat)?{condition:null,handover:null,bedrooms:/^Not applicable/.test(val('c-beds'))?null:val('c-beds'),furnished:/^Not applicable/.test(val('c-furn'))?null:val('c-furn'),period:cat==='market-rent'?'month':null}:{condition:val('c-cond'),handover:val('c-hand')}),district_id:g.d,town_id:g.t==='__other'?null:(g.t||null),area_id:g.a==='__other'?null:(g.a||null),photos:urls});if(error)throw error;
    if(cat==='__other')await otherReq('market_category',val('c-m-co'));
    if(g.t==='__other')await otherReq('town',g.to);if(g.a==='__other')await otherReq('area',g.ao);
    S.tab='market';
@@ -697,7 +731,7 @@ function policyText(id){
  const contact=[c.phone,c.whatsapp?'WhatsApp '+c.whatsapp:'',c.email].filter(Boolean).join(' · ')||'the contact details shown in the app';
  const X={
  about:[['Who we are',`${SITE_NAME} is a private community platform for visitors to North Cyprus and for foreign residents who live here. It is a place to ask questions, share tips, meet people, buy and sell small things, and find local businesses.`],['What we are not',`We are not an estate agent, a bank, a shop or a government body. The platform stands on its own. It is run by two private individuals and does not trade under any company name.`],['Who it is for',`The community is intended for visitors and foreign residents. It is not intended for Cypriot nationals or permanent residents. Anyone can sign up, and the administrators decide who is eligible and may close an account that does not fit.`]],
- terms:[['Using the community',`Be kind and honest. No hate, harassment, scams, adverts for services we do not list, adult content or anything illegal. Do not post other people's private details. You are responsible for what you post.`],['Community marketplace',`The marketplace is for small, everyday items. No cars, no property and no services. Listings last 30 days and use photos only. Deals are made directly between members, in person and in cash or however you agree. The platform never takes payment, holds money or guarantees any sale. Check items before you pay.`],['Advice and guides',`Guides and posts are shared by the community. They are not legal, tax, medical or financial advice. Always check with official sources and qualified professionals before you act.`],['Moderation',`The administrators have full control of the platform and may edit, hide or remove any content, change or close any account, and change these terms at any time. Report anything that worries you with the flag button.`],['Businesses',`Business directory listings and banners are agreed with the administrators, are paid monthly, and may be removed at any time. A business shows as unverified until the administrators confirm it.`]],
+ terms:[['Using the community',`Be kind and honest. No hate, harassment, scams, adverts for services we do not list, adult content or anything illegal. Do not post other people's private details. You are responsible for what you post.`],['Community marketplace',`The marketplace is for small, everyday items. Property to rent or for sale is welcome, but no cars and no services. Listings last 30 days and use photos only. Deals are made directly between members, in person and in cash or however you agree. The platform never takes payment, holds money or guarantees any sale. Check items before you pay.`],['Advice and guides',`Guides and posts are shared by the community. They are not legal, tax, medical or financial advice. Always check with official sources and qualified professionals before you act.`],['Moderation',`The administrators have full control of the platform and may edit, hide or remove any content, change or close any account, and change these terms at any time. Report anything that worries you with the flag button.`],['Businesses',`Business directory listings and banners are agreed with the administrators, are paid monthly, and may be removed at any time. A business shows as unverified until the administrators confirm it.`]],
  payment:[['Free period',`Every member gets ${fm} months free, counted from the day that member signs up.`],['Monthly fee',`After the free period there is a monthly fee of ${fee}. It is paid in cash, outside the platform, to the community contact. The platform has no payment page and never asks for card details.`],['How payment is recorded',`When you pay, an administrator records it on your account and your next due date moves forward.`],['Reminder and ${gd} days'.replace('${gd}',gd),`If your due date passes, you have ${gd} days to pay. During those days you will see a reminder with a daily countdown.`],['If payment is not made',`If the ${gd} days end without payment, your account is paused and shows a "please make payment to continue" page with the contact phone and email. Your details stay safe. As soon as payment is recorded your account opens again.`],['Invitation only',`Sign-up is open to everyone for now. The administrators may switch sign-up to invitation only at any time. Existing members are not affected.`],['Tax',`Payments are cash in hand between members and the community contact. Each person is responsible for their own tax position.`]],
  privacy:[['What we store',`Your name, email address, area, the account type you chose, the posts, listings, photos and messages you create, and the dates that track your free period and payments. Passwords are stored only in scrambled form.`],['Why',`To run your account, show your content to other members, keep the community safe, and track the monthly payment.`],['Who can see what',`Public posts can be seen by visitors. Members-only posts, messages and the marketplace are for signed-in members. Your email is never shown to other members. Administrators can see account details so they can run the platform.`],['Where it lives',`Data is held with a cloud database provider in the European Union (Frankfurt) and photos are served through a content delivery network. We use an email service to send sign-in and account emails. We do not sell your data or show third-party tracking.`],['Your choices',`You can change your name, area and photo at any time. To have your account and content deleted, contact us at ${contact} and an administrator will remove it.`],['Cookies',`Only the small storage the app needs to keep you signed in and remember your language and theme.`],['Note',`This is a plain-language summary. It should be reviewed by a qualified adviser before launch.`]],
  contact:[['Contact',`Phone and email: ${contact}.`],['In an emergency',`Call the emergency numbers in the SOS button. This community cannot send help.`]]
@@ -727,7 +761,19 @@ function shareItem(k,id,text){
  if(navigator.share){navigator.share({title:SITE_NAME,text:text||SITE_NAME,url}).catch(()=>{});return}
  try{navigator.clipboard.writeText(url).then(()=>toast(T('link_copied')),()=>toast(url))}catch(e){toast(url)}
 }
-ACT.share=d=>{if(d&&d.k)shareItem(d.k,d.id,d.t);else copy(location.origin+'/')};
+ACT.share=d=>{
+ if(d&&(d.k==='listing'||d.k==='event')&&isM()){openSheet({v:'sharesel',k:d.k,id:d.id,t:d.t});return}
+ if(d&&d.k)shareItem(d.k,d.id,d.t);else copy(location.origin+'/');
+};
+SH.sharesel=s=>`<h2 class="h2">${T('share')}</h2><div class="stack" style="margin-top:12px"><label class="f" for="sf-t">${T('share_say')}</label><textarea id="sf-t" maxlength="500" style="min-height:70px"></textarea><button class="btn block" data-act="sharefeed" data-k="${s.k}" data-id="${s.id}" data-t="${esc(s.t||'')}">${ic('users','s')}${T('share_feed')}</button><div class="seg" id="sf-aud">${['public','members','friends'].map(a=>`<button class="${(S.sfa||'public')===a?'on':''}" data-act="sfaud" data-id="${a}">${ic(audI[a],'s')}${T(audK[a])}</button>`).join('')}</div><button class="btn soft block" data-act="sharelink" data-k="${s.k}" data-id="${s.id}" data-t="${esc(s.t||'')}">${ic('share','s')}${T('share_link')}</button></div>`;
+ACT.sfaud=d=>{S.sfa=d.id;document.querySelectorAll('#sf-aud button').forEach(b=>b.classList.toggle('on',b.dataset.id===d.id))};
+ACT.sharelink=d=>{closeSheet();shareItem(d.k,d.id,d.t)};
+ACT.sharefeed=async d=>{
+ if(gate())return;const say=val('sf-t')||d.t||'';
+ const {error}=await sb.from('posts').insert({author:S.uid,body:say.slice(0,1500)||'Shared',audience:S.sfa||'public',ref_kind:d.k,ref_id:d.id});
+ if(error)return toast(error.message);
+ closeSheet();S.ff='all';S.tab='feed';S.stack=[];await loadContent();render();window.scrollTo(0,0);toast(T('shared_ok'));
+};
 const waLink=(k,id,text)=>'https://wa.me/?text='+encodeURIComponent((text||'').slice(0,120)+' — '+SITE_NAME+' '+itemUrl(k,id));
 function actBar(k,id,text,o){
  o=o||{};const key=k+':'+id,lk=ilk(key),cm=(DB.ic||{})[key]||[],del={listing:'dellisting',event:'delmeet'}[k];
@@ -757,50 +803,74 @@ ACT.icmtsend=async d=>{
  if(error)return toast(error.message);
  const key=d.k+':'+d.id;(DB.ic[key]=DB.ic[key]||[]).push(data);renderMain();renderOv(true);
 };
-function fhead(who,at,pillIcon,pillText,org){
- const w=who==='org'?{n:T('up_from'),org:1}:(P[who]||{n:'Member'});
- const avh=who==='org'?`<span class="ring bz" style="--s:44px"><span class="av" style="--h:140">${ic('island')}</span></span>`:av(who);
- return `<div class="ph">${avh}<div style="min-width:0"><b>${esc(w.n)}${w.biz?` <span class="pill" style="vertical-align:1px">${ic('vcheck','s')}${T('verified')}</span>`:''}</b><small>${ago(minsAgo(at))} · <span class="pill" style="vertical-align:1px">${ic(pillIcon,'s')}${pillText}</span></small></div></div>`;
+
+/* friends */
+const frIn=()=>(S.frs||[]).filter(f=>f.status==='pending'&&f.addressee===S.uid);
+const frOut=()=>(S.frs||[]).filter(f=>f.status==='pending'&&f.requester===S.uid);
+const frAcc=()=>(S.frs||[]).filter(f=>f.status==='accepted');
+const frOther=f=>f.requester===S.uid?f.addressee:f.requester;
+const friendIds=()=>new Set(frAcc().map(frOther));
+function frState(id){
+ if(id==='me'||id===S.uid)return 'me';
+ const f=(S.frs||[]).find(x=>x.requester===id||x.addressee===id);
+ if(!f)return 'none';
+ if(f.status==='accepted')return 'friends';
+ return f.requester===S.uid?'sent':'incoming';
 }
-function fcard(k,o){
- if(k==='listing'){
-  const l=o,mine=l.who==='me'||S.admin;
-  return `<article class="card post">${fhead(l.who,l.at,'bag',T('mk_title'))}
-  <button class="btn0" style="display:block;width:100%;text-align:left;margin-top:12px;border:0;background:none;padding:0" data-act="push" data-v="listing" data-id="${l.id}"><div class="galw"><div class="gal"><div class="sl">${thumbFor(l)}</div></div></div><div style="margin-top:10px"><b style="font-size:17px;overflow-wrap:anywhere">${esc(l.t)}</b><div class="h2" style="color:var(--gd)">${l.price?money(l.price,l.cur):T('free')}</div><div class="sm mut">${ic('pin','s')} ${esc(l.area)}</div></div></button>
-  ${actBar('listing',l.id,l.t,{mine})}</article>`;
- }
- if(k==='event'){
-  const e=o,mine=e.who==='me'||S.admin,g=e.goingMe;
-  return `<article class="card post">${fhead(e.who,e.at,'cal',T('m_events'))}
-  <div style="margin-top:12px"><b style="font-size:17px;overflow-wrap:anywhere">${esc(e.t)}</b><div class="sm" style="margin-top:4px">${ic('cal','s')} ${fdate(e.starts.slice(0,10),1)} · ${new Date(e.starts).toLocaleTimeString(LOC[S.L],{hour:'2-digit',minute:'2-digit'})}</div>${e.where?`<div class="sm mut">${ic('pin','s')} ${esc(e.where)}</div>`:''}<div class="xs mut" style="margin-top:2px">${F('ev_who',{n:e.n})}</div></div>
-  <div class="row" style="margin-top:10px"><button class="btn grow ${g?'soft':''}" data-act="going" data-id="${e.id}">${ic(g?'check':'plus','s')}${g?T('going_on'):T('going')}</button><button class="btn soft" data-act="push" data-v="event" data-id="${e.id}">${T('view_item')}</button></div>
-  ${actBar('event',e.id,e.t,{mine})}</article>`;
- }
- const u=o;
- return `<article class="card post">${fhead('org',u.created_at,'bell',T('m_updates'))}
- <button class="btn0" style="display:block;width:100%;text-align:left;margin-top:12px;border:0;background:none;padding:0" data-act="push" data-v="update" data-id="${u.id}">${u.image_url?`<div class="galw" style="margin-bottom:10px"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<b style="font-size:17px;overflow-wrap:anywhere">${esc(u.title)}</b><div class="mut" style="margin-top:4px;overflow-wrap:anywhere">${esc(u.body.slice(0,160))}${u.body.length>160?'…':''}</div></button>
- ${actBar('update',u.id,u.title,{})}</article>`;
+async function reloadFriends(){
+ if(!S.uid)return;
+ const r=await sb.from('friendships').select('*');S.frs=r.data||[];
+ await loadPeople(S.frs.flatMap(f=>[f.requester,f.addressee]));
+ const um=(S.msgs||[]).filter(m=>m.to_id===S.uid&&!m.read).length;S.unread=um+frIn().length;
+ renderTop();
+}
+N({
+ aud_friends:["Friends","Arkadaşlar","Znajomi","Друзья"],
+ fr_title:["Friends","Arkadaşlar","Znajomi","Друзья"],fr_add:["Add friend","Arkadaş ekle","Dodaj do znajomych","Добавить в друзья"],
+ fr_sent:["Request sent","İstek gönderildi","Zaproszenie wysłane","Запрос отправлен"],fr_accept:["Accept","Kabul et","Akceptuj","Принять"],
+ fr_decline:["Decline","Reddet","Odrzuć","Отклонить"],fr_cancel:["Cancel request","İsteği iptal et","Anuluj zaproszenie","Отменить запрос"],
+ fr_friends:["Friends","Arkadaşsınız","Znajomi","Друзья"],fr_remove:["Remove friend","Arkadaşlıktan çıkar","Usuń ze znajomych","Удалить из друзей"],
+ fr_reqs:["Friend requests","Arkadaşlık istekleri","Zaproszenia do znajomych","Запросы в друзья"],fr_yours:["Your friends","Arkadaşların","Twoi znajomi","Ваши друзья"],
+ fr_pending:["Requests you sent","Gönderdiğin istekler","Wysłane zaproszenia","Отправленные запросы"],fr_find:["Find people","Kişi bul","Znajdź ludzi","Найти людей"],
+ fr_find_ph:["Search by name","İsimle ara","Szukaj po imieniu","Поиск по имени"],fr_none:["No friends yet. Find your neighbours and say hello.","Henüz arkadaş yok. Komşularını bul ve merhaba de.","Brak znajomych. Znajdź sąsiadów i się przywitaj.","Друзей пока нет. Найдите соседей и поздоровайтесь."],
+ fr_noreq:["No new requests.","Yeni istek yok.","Brak nowych zaproszeń.","Новых запросов нет."],fr_noresult:["Nobody found.","Kimse bulunamadı.","Nikogo nie znaleziono.","Никого не найдено."],
+ my_profile:["My profile and posts","Profilim ve gönderilerim","Mój profil i wpisy","Мой профиль и записи"],
+ ff_all:["Everyone","Herkes","Wszyscy","Все"],ff_friends:["Friends","Arkadaşlar","Znajomi","Друзья"],
+ share_feed:["Share to my profile and feed","Profilimde ve akışta paylaş","Udostępnij na profilu i w aktualnościach","Поделиться в профиле и ленте"],
+ share_link:["Send the link","Bağlantıyı gönder","Wyślij link","Отправить ссылку"],share_say:["Add a few words (optional)","Birkaç söz ekle (isteğe bağlı)","Dodaj kilka słów (opcjonalnie)","Добавьте пару слов (по желанию)"],
+ shared_ok:["Shared to your feed","Akışında paylaşıldı","Udostępniono","Опубликовано в вашей ленте"],
+ gone:["No longer available","Artık mevcut değil","Już niedostępne","Больше недоступно"],
+ feed_empty_f:["Nothing from your friends yet. Add friends and their posts will show here.","Arkadaşlarından henüz paylaşım yok. Arkadaş ekle, gönderileri burada görünsün.","Brak wpisów od znajomych. Dodaj znajomych, a ich wpisy pojawią się tutaj.","Пока ничего от друзей. Добавьте друзей, и их записи появятся здесь."]
+});
+audI.friends='users';audK.friends='aud_friends';
+
+/* a listing or meetup that someone shared to their profile */
+function refCard(r){
+ if(r.k==='listing'){const l=S.listings.find(x=>x.id===r.id);
+  if(!l)return `<div class="note" style="margin-top:12px"><div class="sm mut">${T('gone')}</div></div>`;
+  return `<button class="listrow" style="margin-top:12px" data-act="push" data-v="listing" data-id="${l.id}"><span class="th">${thumbFor(l)}</span><span class="grow"><span class="xs mut">${T('mk_title')}</span><b>${esc(l.t)}</b><span class="xs mut">${l.price?lmoney(l):T("free")} · ${esc(l.area)}</span></span>${ic('right')}</button>`}
+ const e=S.meetups.find(x=>x.id===r.id);
+ if(!e)return `<div class="note" style="margin-top:12px"><div class="sm mut">${T('gone')}</div></div>`;
+ return `<button class="listrow" style="margin-top:12px" data-act="push" data-v="event" data-id="${e.id}"><span class="th">${thmRaw('group',hueOf(e.id))}</span><span class="grow"><span class="xs mut">${T('m_events')}</span><b>${esc(e.t)}</b><span class="xs mut">${ymd(e.starts)}${e.area?' · '+esc(e.area):''}</span></span>${ic('right')}</button>`;
 }
 function feedItems(){
- const f=S.ff||'all',it=[];
- if(f==='all'||f==='post')S.posts.filter(p=>!p.club).forEach(p=>it.push({k:'post',t:new Date(p.raw.created_at).getTime(),o:p}));
- if(f==='all'||f==='listing')S.listings.forEach(l=>it.push({k:'listing',t:new Date(l.at).getTime(),o:l}));
- if(f==='all'||f==='event')S.meetups.forEach(e=>it.push({k:'event',t:new Date(e.at).getTime(),o:e}));
- if(f==='all'||f==='update')(S.upd||[]).forEach(u=>it.push({k:'update',t:new Date(u.created_at).getTime(),o:u}));
- return it.sort((a,b)=>b.t-a.t);
+ const f=S.ff==='friends'?'friends':'all',fr=friendIds();
+ return S.posts.filter(p=>!p.club).filter(p=>f==='all'||p.who==='me'||fr.has(p.who)).slice().sort((a,b)=>a.m-b.m);
 }
 function feedV(){
  let h='<div class="stack">'+notes();
- const ppl=Object.keys(P).filter(k=>k!=='me'&&!P[k].org).slice(0,5);
- if(ppl.length)h+=`<section><h2 class="h3">${T('friends')}</h2><div class="leaves">`+ppl.map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+`<button class="leaf inv" data-act="invite"><span class="lf">${ic('plus')}</span><span class="n">${T('invite')}</span></button></div></section>`;
- if(isM())h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="create" data-type="post">${av('me',40)}<span class="grow mut">${T('compose_ph')}</span>${ic('image','s')}</button>`;
+ if(isM()){
+  const fr=[...friendIds()].filter(k=>P[k]).slice(0,6);
+  h+=`<section><h2 class="h3">${T('fr_title')}</h2><div class="leaves">`+fr.map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${P[k].img?`<img src="${esc(P[k].img)}" alt="">`:esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+`<button class="leaf inv" data-act="push" data-v="friends"><span class="lf">${ic('plus')}</span><span class="n">${T('fr_find')}</span></button></div></section>`;
+  h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="create" data-type="post">${av('me',40)}<span class="grow mut">${T('compose_ph')}</span>${ic('image','s')}</button>`;
+ }
  h+=bannerHtml('feed');
- const f=S.ff||'all';
- h+=`<div class="chips">${[['all',T('all')],['post',T('ff_posts')],['listing',T('mk_title')],['event',T('ff_meet')],['update',T('ff_news')]].map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="ff" data-id="${c[0]}">${c[1]}</button>`).join('')}</div>`;
+ const f=S.ff==='friends'?'friends':'all';
+ if(isM())h+=`<div class="chips">${[['all',T('ff_all')],['friends',T('ff_friends')]].map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="ff" data-id="${c[0]}">${c[1]}</button>`).join('')}</div>`;
  const list=feedItems();
- if(!list.length)h+=`<div class="card" style="text-align:center"><p class="mut">${T('none_posts')}</p></div>`;
+ if(!list.length)h+=`<div class="card" style="text-align:center"><p class="mut">${T(f==='friends'?'feed_empty_f':'none_posts')}</p></div>`;
  const lim=S.role==='visitor'?3:list.length;
- list.slice(0,lim).forEach(x=>{h+=x.k==='post'?post(x.o):fcard(x.k,x.o)});
+ list.slice(0,lim).forEach(p=>{h+=post(p)});
  if(S.role==='visitor'&&list.length>lim)h+=`<div class="card" style="text-align:center"><h3 class="h2">${T('gate_t')}</h3><p class="mut" style="margin:6px 0 12px">${T('gate_d')}</p><button class="btn block" data-act="signup">${T('join_free')}</button></div>`;
  else if(S.role!=='visitor'&&list.length)h+=`<div class="card" style="text-align:center"><div class="mark" style="margin:0 auto 8px;width:44px;height:44px">${ic('check','l')}</div><div class="mut">${T('caught')}</div><button class="btn soft" style="margin-top:12px" data-act="refresh">${ic('refresh','s')}${T('refresh')}</button></div>`;
  return h+'</div>';
