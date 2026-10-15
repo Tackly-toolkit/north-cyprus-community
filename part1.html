@@ -149,6 +149,7 @@ label.f{display:block;font:600 13px var(--bf);margin:12px 0 6px}
 .opt.on{border-color:var(--gd);background:var(--gs)}
 .opt .lf{background:var(--gs);color:var(--gd);width:46px;height:46px}
 .bignum{font:700 40px var(--hf);color:var(--gd)}
+#chatb{position:fixed;right:14px;bottom:calc(78px + env(safe-area-inset-bottom,0px));z-index:30;width:56px;height:56px;border-radius:50%;border:0;background:var(--gd);color:var(--onb);box-shadow:var(--shd);display:grid;place-items:center}#chatb .ic{width:26px;height:26px}#chatb .dot{position:absolute;top:-2px;right:-2px;min-width:20px;height:20px;border-radius:10px;background:var(--r);color:#fff;font:600 11px/20px var(--bf);text-align:center;padding:0 5px}
 #toast{position:fixed;left:50%;bottom:calc(88px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);background:var(--fg);color:var(--bg);padding:11px 18px;border-radius:999px;font:500 14px var(--bf);z-index:90;opacity:0;pointer-events:none;transition:.25s;max-width:90vw;text-align:center}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 .blur{filter:blur(5px);pointer-events:none;user-select:none}
@@ -240,4 +241,5 @@ video.art{background:var(--gs)}
 <div id="lock" hidden></div>
 <div id="ov" hidden></div>
 <div id="sh" hidden></div>
+<button id="chatb" data-act="supportopen" hidden aria-label="Chat with us" title="Chat with us"><svg class="ic" aria-hidden="true"><use href="#i-msg"/></svg><span class="dot" hidden></span></button>
 <div id="toast" role="status"></div>
