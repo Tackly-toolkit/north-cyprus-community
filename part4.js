@@ -9,7 +9,7 @@ const SB_KEY='__ANON_KEY__';
 const SITE_NAME='North Cyprus Community';
 const SITE_SHORT='North Cyprus';
 const sb=window.supabase.createClient(SB_URL,SB_KEY,{auth:{persistSession:true,autoRefreshToken:true,detectSessionInUrl:true}});
-const DB={geo:[],cats:[],lists:{condition:[],currency:[],handover:[],bedrooms:[],furnished:[]},cfg:{signup_mode:'open',free_months:3,grace_days:4},contact:{phone:'',email:''},clubs:[],banners:[]};
+const DB={geo:[],cats:[],lists:{condition:[],currency:[],handover:[],bedrooms:[],furnished:[]},cfg:{signup_mode:'open',free_months:3,grace_days:4},contact:{email:''},clubs:[],banners:[]};
 
 /* demo people are not part of the real platform */
 Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
@@ -36,7 +36,7 @@ N({
  f_pay:["Payment and access","Ödeme ve erişim","Płatność i dostęp","Оплата и доступ"],
  f_contact:["Contact","İletişim","Kontakt","Контакты"],
  sos_pol:["Police","Polis","Policja","Полиция"],sos_amb:["Ambulance","Ambulans","Pogotowie","Скорая"],
- sos_adm:["Community contact","Topluluk iletişim","Kontakt do społeczności","Контакт сообщества"],
+ sup_t:["Chat with us","Bizimle yazışın","Napisz do nas","Напишите нам"],sup_d:["Message the administrators. We reply here and you get an alert.","Yöneticilere yazın. Yanıtımız burada görünür.","Napisz do administratorów. Odpowiemy tutaj.","Напишите администраторам. Мы ответим здесь."],sup_ph:["Type your message","Mesajınızı yazın","Wpisz wiadomość","Введите сообщение"],sup_empty:["No messages yet. Say hello and ask us anything.","Henüz mesaj yok. Merhaba deyin, bize her şeyi sorabilirsiniz.","Brak wiadomości. Napisz do nas.","Сообщений пока нет. Напишите нам."],sup_team:["Admin","Yönetici","Admin","Админ"],sup_you:["You","Siz","Ty","Вы"],sos_adm:["Community contact","Topluluk iletişim","Kontakt do społeczności","Контакт сообщества"],
  sign_in:["Sign in","Giriş yap","Zaloguj się","Войти"],sign_out:["Sign out","Çıkış yap","Wyloguj się","Выйти"],
  email:["Email","E-posta","E-mail","Эл. почта"],pw:["Password (8+ characters)","Şifre (en az 8 karakter)","Hasło (min. 8 znaków)","Пароль (от 8 символов)"],
  pw_only:["Password","Şifre","Hasło","Пароль"],
@@ -201,7 +201,7 @@ async function loadStatic(){
  (l.data||[]).forEach(r=>{(DB.lists[r.kind]=DB.lists[r.kind]||[]).push(r.value)});
  if(cfg.data)DB.cfg=cfg.data;
  const row=Array.isArray(ct.data)?ct.data[0]:ct.data;
- if(row)DB.contact={phone:row.phone||'',email:row.email||'',whatsapp:row.whatsapp||''};
+ if(row)DB.contact={email:row.email||''};
  DB.clubs=cl.data||[];
 }
 function mapPost(r){
@@ -267,7 +267,8 @@ async function sync(opts){
  }
  S.role=!S.prof?'visitor':(S.prof.account_type==='business'?'business':'individual');
  S.admin=!!(S.prof&&S.prof.role==='admin');
- setMe();
+
+ setMe();S.sup=[];S.supUnread=0;updateBubble();supLoad();
  const st=S.acct?S.acct.state:'active';
  if(S.prof&&(st==='locked'||st==='suspended')){await showLock(st);return}
  hideLock();
@@ -290,7 +291,7 @@ async function postLogin(){
 }
 async function showLock(st){
  let c=DB.contact;
- const ct=await sb.rpc('contact_details');const row=Array.isArray(ct.data)?ct.data[0]:ct.data;if(row)c={phone:row.phone||'',email:row.email||'',whatsapp:row.whatsapp||''};
+ const ct=await sb.rpc('contact_details');const row=Array.isArray(ct.data)?ct.data[0]:ct.data;if(row)c={email:row.email||''};
  DB.contact=c;
  const el=$('#lock'),susp=st==='suspended';
  el.hidden=false;$('#app').hidden=true;$('#ov').hidden=true;$('#sh').hidden=true;
@@ -305,20 +306,15 @@ function payNote(){
  const n=S.acct.days_left;
  return `<div class="note sticky" style="border-color:var(--r)">${ic('info')}<div style="flex:1"><b>${T('pay_t')}</b><div class="sm" style="margin-top:2px">${n<=1?T('pay_left1'):F('pay_left',{n})}</div>${contactLine()}</div></div>`;
 }
-const telHref=n=>'tel:'+String(n).replace(/[^\d+]/g,'');
-const waHref=n=>'https://wa.me/'+String(n).replace(/\D/g,'');
 function contactRows(c){
  const r=[];
- if(c.phone)r.push(`<div class="row">${ic('phone2')}<div class="grow"><div class="xs mut">${T('phone')}</div><b style="font-size:19px">${esc(c.phone)}</b></div><a class="btn soft" href="${telHref(c.phone)}">${ic('phone2','s')}${T('call')}</a></div>`);
- if(c.whatsapp)r.push(`<div class="row">${ic('wa')}<div class="grow"><div class="xs mut">WhatsApp</div><b style="font-size:19px">${esc(c.whatsapp)}</b></div><a class="btn soft" href="${waHref(c.whatsapp)}" target="_blank" rel="noopener">${ic('wa','s')}${T('chat')}</a></div>`);
+ r.push(`<div class="row">${ic('msg')}<div class="grow"><b>${T('sup_t')}</b><div class="xs mut">${T('sup_d')}</div></div><button class="btn soft" data-act="supportopen">${ic('msg','s')}${T('chat')}</button></div>`);
  if(c.email)r.push(`<div class="row">${ic('msg')}<div class="grow" style="min-width:0"><div class="xs mut">${T('email')}</div><b style="overflow-wrap:anywhere">${esc(c.email)}</b></div><a class="btn soft" href="mailto:${esc(c.email)}">${ic('send','s')}${T('email')}</a></div>`);
  return r.join('');
 }
 function contactLine(){
- const c=DB.contact,b=[];
- if(c.phone)b.push(`<a class="btn soft" href="${telHref(c.phone)}">${ic('phone2','s')}${esc(c.phone)}</a>`);
- if(c.whatsapp)b.push(`<a class="btn soft" href="${waHref(c.whatsapp)}" target="_blank" rel="noopener">${ic('wa','s')}${esc(c.whatsapp)}</a>`);
- return b.length?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;justify-content:center">${b.join('')}</div>${c.email?`<div class="xs mut" style="margin-top:6px;overflow-wrap:anywhere">${esc(c.email)}</div>`:''}`:(c.email?`<div class="xs mut">${esc(c.email)}</div>`:'');
+ const c=DB.contact;
+ return `<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;justify-content:center"><button class="btn soft" data-act="supportopen">${ic('msg','s')}${T('sup_t')}</button></div>${c.email?`<div class="xs mut" style="margin-top:6px;overflow-wrap:anywhere">${esc(c.email)}</div>`:''}`;
 }
 function feeText(){
  const c=DB.cfg||{};if(c.monthly_fee_try)return Number(c.monthly_fee_try).toLocaleString(LOC[S.L])+' TL';
@@ -358,7 +354,7 @@ SH.signin=s=>`<h2 class="h2">${T('sign_in')}</h2><div class="stack" style="margi
 SH.newpw=s=>`<h2 class="h2">${T('newpw_t')}</h2><div class="stack" style="margin-top:12px"><input id="np" type="password" autocomplete="new-password" placeholder="${esc(T('pw'))}" aria-label="${esc(T('pw'))}"><button class="btn block" data-act="donewpw">${T('save')}</button></div>`;
 SH.soon=()=>`<div style="text-align:center"><div class="mark" style="margin:0 auto 12px;width:64px;height:64px">${ic('island','l')}</div><h2 class="h2">${T('soon_t')}</h2><p class="mut" style="margin:10px 0 16px">${T('soon_d')}</p><button class="btn block" data-act="sclose">${T('soon_b')}</button></div>`;
 SH.due=()=>{const n=S.acct?S.acct.days_left:0;return `<div style="text-align:center"><div class="mark" style="margin:0 auto 10px;width:56px;height:56px">${ic('info','l')}</div><h2 class="h2">${T('pay_t')}</h2><div class="bignum" style="margin:10px 0">${n}</div><p style="font-weight:600">${n<=1?T('pay_left1'):F('pay_left',{n})}</p><p class="sm mut" style="margin:10px 0">${T('pay_how')}</p>${feeText()?`<p class="sm"><b>${F('pay_fee',{f:feeText()})}</b></p>`:''}${contactLine()}<button class="btn block" style="margin-top:14px" data-act="sclose">${T('gotit')}</button></div>`};
-SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}${DB.contact.phone||DB.contact.whatsapp?`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({phone:DB.contact.phone,whatsapp:DB.contact.whatsapp,email:''})}</div>`:''}</div>`;
+SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({email:DB.contact.email})}</div></div>`;
 ACT.signinsheet=()=>openSheet({v:'signin'});
 ACT.dosignin=async()=>{
  const e=val('si-e'),p=($('#si-p')||{}).value||'';
@@ -725,16 +721,50 @@ ACT.crpub=async function(){
  S.cr.busy=false;if(btn)btn.disabled=false;
 };
 
+/* ---------- chat bubble (member to admin) ---------- */
+S.sup=[];S.supUnread=0;
+const supHtml=()=>{const m=S.sup||[];return m.length?m.map(x=>`<div class="card" style="${x.from_admin?'margin-right:32px':'background:var(--gs);margin-left:32px'}"><div class="xs mut">${x.from_admin?T('sup_team'):T('sup_you')} · ${ago(minsAgo(x.created_at))}</div><div style="margin-top:4px;overflow-wrap:anywhere;white-space:pre-wrap">${esc(x.body)}</div></div>`).join(''):`<p class="mut sm" style="text-align:center">${T('sup_empty')}</p>`};
+function updateBubble(){
+ const b=$('#chatb');if(!b)return;
+ const show=!!S.uid&&!!S.prof&&(!S.admin||S.supUnread>0);
+ b.hidden=!show;const d=b.querySelector('.dot');d.hidden=!S.supUnread;d.textContent=S.supUnread;
+}
+async function supRead(){
+ const ids=(S.sup||[]).filter(x=>x.from_admin&&!x.read).map(x=>x.id);if(!ids.length)return;
+ await sb.from('support_messages').update({read:true}).in('id',ids);
+ S.sup.forEach(x=>{if(ids.includes(x.id))x.read=true});S.supUnread=0;updateBubble();
+}
+async function supLoad(){
+ if(!S.uid||!S.prof)return;
+ if(S.admin){const r=await sb.rpc('admin_support_threads');S.supUnread=(r.data||[]).reduce((a,x)=>a+Number(x.unread),0);updateBubble();return}
+ const r=await sb.from('support_messages').select('*').eq('member',S.uid).order('created_at');if(r.error)return;
+ S.sup=r.data||[];S.supUnread=S.sup.filter(x=>x.from_admin&&!x.read).length;
+ if(S.sheet&&S.sheet.v==='support'){const l=$('#sup-l');if(l){l.innerHTML=supHtml();l.scrollTop=l.scrollHeight}await supRead()}
+ updateBubble();
+}
+SH.support=()=>`<div class="row"><span class="lf" style="background:var(--gs);color:var(--gd)">${ic('msg','l')}</span><div><h2 class="h2">${T('sup_t')}</h2><div class="sm mut">${T('sup_d')}</div></div></div><div id="sup-l" class="stack" style="margin:12px 0;max-height:44vh;overflow-y:auto">${supHtml()}</div><textarea id="sup-t" maxlength="1000" placeholder="${esc(T('sup_ph'))}" aria-label="${esc(T('sup_ph'))}"></textarea><button class="btn block" style="margin-top:8px" data-act="supsend">${ic('send','s')}${T('send')}</button>`;
+ACT.supportopen=async()=>{
+ if(S.admin){return ACT.adminsupport()}
+ openSheet({v:'support'});await supLoad();await supRead();const l=$('#sup-l');if(l)l.scrollTop=l.scrollHeight;
+};
+ACT.supsend=async()=>{
+ const b=val('sup-t');if(!b)return;
+ const {error}=await sb.from('support_messages').insert({member:S.uid,from_admin:false,body:b});
+ if(error)return toast(error.message);
+ const t=$('#sup-t');if(t)t.value='';await supLoad();const l=$('#sup-l');if(l)l.scrollTop=l.scrollHeight;toast(T('msg_sent'));
+};
+setInterval(()=>{if(S.uid&&S.prof&&!document.hidden)supLoad()},15000);
+
 /* ---------- policies ---------- */
 function policyText(id){
  const c=DB.contact,fee=feeText()||'(to be confirmed)',fm=DB.cfg.free_months||3,gd=DB.cfg.grace_days||4;
- const contact=[c.phone,c.whatsapp?'WhatsApp '+c.whatsapp:'',c.email].filter(Boolean).join(' · ')||'the contact details shown in the app';
+ const contact=['the chat bubble in the app',c.email].filter(Boolean).join(' or email ');
  const X={
  about:[['Welcome',`${SITE_NAME} is a friendly, small community for visitors and foreign residents of North Cyprus. Think of it as a neighbourly group: ask questions, share tips, meet people, buy, sell or rent from each other, and find local businesses.`],['Good to know',`It is run by two private individuals, not a company, agent, bank or government body. It is meant for visitors and foreign residents. The administrators decide who joins and may close an account that does not fit.`]],
  terms:[['House rules',`Be kind and honest. No hate, harassment, scams, adult content or anything illegal. Do not share other people's private details. You are responsible for what you post, and the administrators can edit, hide or remove anything and close any account. Use the flag button to report anything that worries you.`],['Feed and friends',`The feed shows only what members post on their own profile, as a photo and a few words. You choose who sees each post: everyone, members, or friends only. Friends are by request and acceptance. There is no following.`],['Marketplace',`Sell or give away small items, and list property to rent or for sale. Prices are in TL or GBP. No cars and no services. Listings last 30 days and use photos. Deals are agreed directly between members, in person, in cash or however you agree. The platform never takes payment or guarantees any sale, so check everything before you pay.`],['Guides and advice',`Guides and posts come from the community. They are not legal, tax, medical or financial advice. Check with official sources and professionals.`],['Businesses',`Directory listings and banners are agreed with the administrators, paid monthly, shown as unverified until confirmed, and may be removed at any time.`]],
  payment:[['Free to start',`Your first ${fm} months are free, counted from the day you sign up.`],['Monthly fee',`After that the fee is ${fee} a month, paid in cash to the community contact. There is no payment page and we never ask for card details. An administrator records your payment and your next due date moves on.`],['If you are late',`After the due date you have ${gd} days to pay, with a reminder and a daily countdown. If the ${gd} days pass, your account pauses on a "please make payment to continue" page with our contact details. Your information stays safe and your account reopens once payment is recorded.`],['Invitation only',`Sign-up is open for now. The administrators may make it invitation only at any time. Existing members are not affected.`],['Tax',`Payments are cash in hand. Everyone is responsible for their own tax position.`]],
  privacy:[['What we keep',`Your name, email, area, account type, and the posts, photos, listings, friends and messages you create, plus the dates for your free period and payments. Passwords are stored scrambled.`],['Who sees what',`Public posts can be seen by visitors. Members-only posts, friends-only posts, messages and the marketplace are for signed-in members. Your email is never shown to other members. Administrators can see account details to run the community.`],['Where it lives',`In a secure cloud database in the European Union (Frankfurt). We send sign-in and account emails through an email service. We never sell your data and use no third-party tracking.`],['Your choices',`Edit your name, area and photo any time. To have your account and content deleted, contact ${contact}.`],['Note',`This is a plain-language summary and should be reviewed by a qualified adviser before launch.`]],
- contact:[['Contact',`Phone and email: ${contact}.`],['In an emergency',`Call the emergency numbers in the SOS button. This community cannot send help.`]]
+ contact:[['Contact',`Message us through ${contact}.`],['In an emergency',`Call the emergency numbers in the SOS button. This community cannot send help.`]]
  };
  return X[id]||[];
 }

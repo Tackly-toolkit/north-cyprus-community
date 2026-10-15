@@ -48,7 +48,9 @@ async function admLoad(sec,x){
  if(sec==='news'){ADM.news=await aok(sb.from('updates').select('*').order('created_at',{ascending:false}).limit(60))}
  if(sec==='payments'){ADM.pay=await aok(sb.from('payments').select('*,profiles(display_name)').order('created_at',{ascending:false}).limit(200))}
  if(sec==='audit'){ADM.audit=await aok(sb.from('audit_log').select('*').order('created_at',{ascending:false}).limit(80))}
- if(sec==='home'){ADM.sum=await aok(sb.rpc('admin_summary'))}
+ if(sec==='home'){ADM.sum=await aok(sb.rpc('admin_summary'));try{const t=await sb.rpc('admin_support_threads');ADM.supn=(t.data||[]).reduce((a,y)=>a+Number(y.unread),0)}catch(e){}}
+ if(sec==='support'){ADM.threads=await aok(sb.rpc('admin_support_threads'))}
+ if(sec==='sthread'){ADM.sm=await aok(sb.from('support_messages').select('*').eq('member',x).order('created_at'));const pr=await sb.from('profiles').select('display_name').eq('id',x).maybeSingle();ADM.smn=(pr.data&&pr.data.display_name)||'Member';await sb.from('support_messages').update({read:true}).eq('member',x).eq('from_admin',false).eq('read',false);supLoad()}
 }
 async function admGo(sec,x,view){
  try{await admLoad(sec,x)}catch(e){return}
@@ -66,6 +68,7 @@ V.admin=function(){
  const c=(n,l)=>`<div class="card" style="text-align:center;padding:12px 8px"><div class="h2">${n===undefined?'–':n}</div><div class="xs mut">${l}</div></div>`;
  const r=(sec,l,sub,view,n)=>aRow('admgo',`data-sec="${sec}" ${view?`data-view="${view}"`:''}`,l,sub,n?`<span class="pill red">${n}</span>`:undefined);
  return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${c(s.businesses,'Businesses')}${c(s.in_grace,'Payment due')}${c(s.locked,'Locked')}</div>
+ ${r('support','Chat messages','Members writing to you through the chat bubble',0,ADM.supn)}
  ${r('members','Members and payments','Search, mark paid, lock, suspend')}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
@@ -148,20 +151,36 @@ ACT.amode=async()=>{const nm=ADM.settings.signup_mode==='invite'?'open':'invite'
 ACT.anewinv=async()=>{const e=val('a-ie');const r=await aok(sb.from('invites').insert({email:e||null,created_by:S.uid}).select().single());copy(location.origin+'/?invite='+r.code);aLog('invite',{code:r.code});admReload()};
 ACT.adelinv=async d=>{await aok(sb.from('invites').delete().eq('code',d.id));admReload()};
 
+/* ---------- chat inbox ---------- */
+V.adm_support=function(){
+ const t=ADM.threads||[];
+ return {t:'Chat messages',b:`<div class="stack">${t.length?t.map(x=>aRow('admgo',`data-sec="sthread" data-x="${x.member}"`,esc(x.display_name||'(no name)'),`${x.last_from_admin?'You: ':''}${esc((x.last_body||'').slice(0,90))} · ${aTime(x.last_at)}`,(Number(x.unread)?`<span class="pill red">${x.unread}</span>`:'')+ic('right'))).join(''):'<div class="card" style="text-align:center"><p class="mut">No messages yet.</p></div>'}</div>`};
+};
+V.adm_sthread=function(o){
+ const m=ADM.sm||[];
+ return {t:esc(ADM.smn||'Member'),b:`<div class="stack">${m.map(x=>`<div class="card" style="${x.from_admin?'background:var(--gs);margin-left:32px':'margin-right:32px'}"><div class="xs mut">${x.from_admin?'You':esc(ADM.smn||'Member')} · ${aTime(x.created_at)}</div><div style="margin-top:4px;overflow-wrap:anywhere;white-space:pre-wrap">${esc(x.body)}</div></div>`).join('')}<textarea id="a-sr" maxlength="1000" placeholder="Write a reply" aria-label="Write a reply"></textarea>${aBtn('asupsend',`data-x="${o.x}"`,`${ic('send','s')}Send reply`,'')}${aBtn('admgo',`data-sec="member" data-x="${o.x}"`,'Open member profile','line')}</div>`};
+};
+ACT.asupsend=async d=>{
+ const b=val('a-sr');if(!b)return;
+ await aok(sb.from('support_messages').insert({member:d.x,from_admin:true,body:b}));
+ toast('Sent');admReload();
+};
+ACT.adminsupport=async()=>{try{await admLoad('support')}catch(e){return}push('adm_support',{sec:'support'})};
+
 /* ---------- settings ---------- */
 V.adm_settings=function(){
  const s=ADM.settings||{};
  return {t:'Settings',b:`<div class="stack"><div class="card stack">
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-fm">Free months</label><input id="s-fm" type="number" min="0" value="${s.free_months}"></div><div><label class="f" for="s-gd">Days to pay after due date</label><input id="s-gd" type="number" min="0" value="${s.grace_days}"></div></div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-ft">Monthly fee (TL)</label><input id="s-ft" type="number" min="0" inputmode="decimal" value="${s.monthly_fee_try??''}"></div><div><label class="f" for="s-fg">Monthly fee (GBP, optional)</label><input id="s-fg" type="number" min="0" step="0.01" inputmode="decimal" value="${s.monthly_fee_gbp??''}"></div></div>
- <label class="f" for="s-ph">Contact phone (shown on the lock page)</label><input id="s-ph" value="${esc(s.contact_phone||'')}"><label class="f" for="s-wa">WhatsApp number</label><input id="s-wa" value="${esc(s.contact_whatsapp||'')}"><label class="f" for="s-em">Contact email (shown on the lock page)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
+ <label class="f" for="s-em">Contact email (shown on the lock page; add the professional address here later)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
  ${aBtn('asave',`${ic('check','s')}Save settings`,'','')}</div><p class="xs mut">Free months apply to people who sign up after you change them. Days to pay apply to everyone straight away.</p></div>`};
 };
 ACT.asave=async()=>{
  const n=id=>{const v=val(id);return v===''?null:Number(v)};
- const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:val('s-ph')||null,contact_whatsapp:val('s-wa')||null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
+ const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:null,contact_whatsapp:null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
  await aok(sb.from('app_settings').update(row).eq('id',1));aLog('settings',row);
- DB.cfg.free_months=row.free_months;DB.cfg.grace_days=row.grace_days;DB.cfg.monthly_fee_try=row.monthly_fee_try;DB.cfg.monthly_fee_gbp=row.monthly_fee_gbp;DB.contact={phone:row.contact_phone||'',email:row.contact_email||'',whatsapp:row.contact_whatsapp||''};
+ DB.cfg.free_months=row.free_months;DB.cfg.grace_days=row.grace_days;DB.cfg.monthly_fee_try=row.monthly_fee_try;DB.cfg.monthly_fee_gbp=row.monthly_fee_gbp;DB.contact={email:row.contact_email||''};
  toast('Saved');admReload();
 };
 

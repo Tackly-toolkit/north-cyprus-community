@@ -21,4 +21,4 @@ create policy updates_read on public.updates for select using (published);
 create policy updates_admin on public.updates for all using (public.is_admin()) with check (public.is_admin());
 
 update public.app_settings set monthly_fee_try = 250, contact_email = 'Chris@bydesignuk.co.uk',
-  contact_phone = '+90 548 867 03 09', contact_whatsapp = '+44 7561 219630' where id = 1;
+  contact_phone = null, contact_whatsapp = null where id = 1;
