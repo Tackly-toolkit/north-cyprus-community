@@ -22,7 +22,7 @@ const aSw=(on,act,attrs,label)=>`<button class="tg ${on?'on':''}" role="switch" 
 
 /* ---------- loading ---------- */
 async function admLoad(sec,x){
- if(sec==='members'||sec==='member'){ADM.members=await aok(sb.rpc('admin_members'))}
+ if(sec==='members'||sec==='member'||sec==='due'){ADM.members=await aok(sb.rpc('admin_members'))}
  if(sec==='member'){ADM.pay=await aok(sb.from('payments').select('*').eq('profile_id',x).order('created_at',{ascending:false}))}
  if(sec==='invites'){ADM.invites=await aok(sb.from('invites').select('*').order('created_at',{ascending:false}));ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
  if(sec==='settings'){ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
@@ -48,8 +48,9 @@ async function admLoad(sec,x){
  if(sec==='news'){ADM.news=await aok(sb.from('updates').select('*').order('created_at',{ascending:false}).limit(60))}
  if(sec==='payments'){ADM.pay=await aok(sb.from('payments').select('*,profiles(display_name)').order('created_at',{ascending:false}).limit(200))}
  if(sec==='audit'){ADM.audit=await aok(sb.from('audit_log').select('*').order('created_at',{ascending:false}).limit(80))}
- if(sec==='home'){ADM.sum=await aok(sb.rpc('admin_summary'));try{const t=await sb.rpc('admin_support_threads');ADM.supn=(t.data||[]).reduce((a,y)=>a+Number(y.unread),0)}catch(e){}}
+ if(sec==='home'){ADM.sum=await aok(sb.rpc('admin_summary'));try{const t=await sb.rpc('admin_support_threads');ADM.supn=(t.data||[]).reduce((a,y)=>a+Number(y.unread),0)}catch(e){}try{const j=await sb.from('join_requests').select('id',{count:'exact',head:true}).eq('status','new');ADM.jrn=j.count||0}catch(e){}}
  if(sec==='support'){ADM.threads=await aok(sb.rpc('admin_support_threads'))}
+ if(sec==='joinreq'){ADM.jr=await aok(sb.from('join_requests').select('*').order('created_at',{ascending:false}).limit(200))}
  if(sec==='sthread'){ADM.sm=await aok(sb.from('support_messages').select('*').eq('member',x).order('created_at'));const pr=await sb.from('profiles').select('display_name').eq('id',x).maybeSingle();ADM.smn=(pr.data&&pr.data.display_name)||'Member';await sb.from('support_messages').update({read:true}).eq('member',x).eq('from_admin',false).eq('read',false);supLoad()}
 }
 async function admGo(sec,x,view){
@@ -69,6 +70,8 @@ V.admin=function(){
  const r=(sec,l,sub,view,n)=>aRow('admgo',`data-sec="${sec}" ${view?`data-view="${view}"`:''}`,l,sub,n?`<span class="pill red">${n}</span>`:undefined);
  return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${c(s.businesses,'Businesses')}${c(s.in_grace,'Payment due')}${c(s.locked,'Locked')}</div>
  ${r('support','Chat messages','Members writing to you through the chat bubble',0,ADM.supn)}
+ ${r('due','Payments due','Reminders, mark paid, lock, spreadsheet download','adm_due',s.in_grace)}
+ ${r('joinreq','Applications','People asking to join (Apply to join)',0,ADM.jrn)}
  ${r('members','Members and payments','Search, mark paid, lock, suspend')}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
@@ -166,6 +169,58 @@ ACT.asupsend=async d=>{
  toast('Sent');admReload();
 };
 ACT.adminsupport=async()=>{try{await admLoad('support')}catch(e){return}push('adm_support',{sec:'support'})};
+
+/* ---------- payments due, reminders, spreadsheet ---------- */
+function dueList(){
+ const now=Date.now(),soon=now+14*864e5;
+ return (ADM.members||[]).filter(m=>m.role!=='admin'&&!m.suspended&&(m.state==='grace'||m.state==='locked'||(m.due_on&&new Date(m.due_on).getTime()<=soon))).sort((a,b)=>new Date(a.due_on||0)-new Date(b.due_on||0));
+}
+V.adm_due=function(){
+ const ls=dueList(),fee=(DB.cfg&&DB.cfg.monthly_fee_try)||'';
+ return {t:'Payments due',b:`<div class="stack"><div class="card stack"><div class="sm mut">Everyone whose payment is due in the next 14 days, in the 4-day grace period, or already locked. Soonest first.</div>${aBtn('acsv',`${ic('copy','s')}Download spreadsheet (all members)`,'','')}</div>
+ ${ls.length?ls.map(m=>{const k='p'+m.id;return `<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(m.display_name||'(no name)')}</b><div class="xs mut" style="overflow-wrap:anywhere">${esc(m.email)} · due ${aDate(m.due_on)}</div></div>${aStatePill(m)}</div>
+ <div class="row" style="flex-wrap:wrap">${aBtn('aremind',`data-id="${m.id}"`,`${ic('msg','s')}Send reminder`)}${aBtn('apaynow',`data-id="${m.id}"`,S.apc===m.id?'Tap again: paid '+fee+' TL, 1 month':`${ic('check','s')}Mark paid`,S.apc===m.id?'':'line')}${m.state==='locked'||m.manual_lock?'':aBtn('alock',`data-id="${m.id}" data-v="1"`,'Lock now','line')}${aBtn('admgo',`data-sec="member" data-x="${m.id}"`,'Open','line')}</div></div>`}).join(''):'<div class="card" style="text-align:center"><p class="mut">Nobody is due yet.</p></div>'}</div>`};
+};
+ACT.aremind=async d=>{
+ const m=ADM.members.find(x=>x.id===d.id);if(!m)return;
+ const fee=(DB.cfg&&DB.cfg.monthly_fee_try)||'250';
+ const txt=`Hello ${m.display_name||''}, a friendly reminder that your membership payment of ${fee} TL is due on ${aDate(m.due_on)}. Please reply here and we will arrange it with you. Thank you!`;
+ await aok(sb.from('support_messages').insert({member:d.id,from_admin:true,body:txt}));
+ aLog('reminder',{profile:d.id});toast('Reminder sent to their chat');
+};
+ACT.apaynow=async d=>{
+ if(S.apc!==d.id){S.apc=d.id;renderOv(true);return}
+ S.apc=null;
+ const fee=parseFloat((DB.cfg&&DB.cfg.monthly_fee_try)||'')||null;
+ await aok(sb.rpc('mark_paid',{p_profile:d.id,p_months:1,p_amount:fee,p_note:'cash'}));
+ toast('Payment recorded');await admReload();
+};
+const csvq=v=>{v=v==null?'':String(v);return /[",\n]/.test(v)?'"'+v.replace(/"/g,'""')+'"':v};
+ACT.acsv=async()=>{
+ const ms=ADM.members||[];
+ const pay=await aok(sb.from('payments').select('profile_id,paid_on,amount_try,months').order('paid_on',{ascending:false}));
+ const last={};pay.forEach(p=>{if(!last[p.profile_id])last[p.profile_id]=p});
+ const d=iso=>iso?String(iso).slice(0,10):'';
+ const rows=[['Name','Email','Type','Joined','Free until','Paid until','Next due','Days left','Status','Last payment date','Last payment TL']].concat(ms.map(m=>{const p=last[m.id]||{};return [m.display_name,m.email,m.account_type==='business'?'Business':'Member',d(m.joined_at),d(m.free_until),d(m.paid_until),d(m.due_on),m.days_left,m.suspended?'suspended':m.state,d(p.paid_on),p.amount_try]}));
+ const csv='﻿'+rows.map(r=>r.map(csvq).join(',')).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8'}));a.download='members-'+new Date().toISOString().slice(0,10)+'.csv';document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},500);
+ toast('Spreadsheet downloaded');
+};
+
+/* ---------- applications (Apply to join) ---------- */
+V.adm_joinreq=function(){
+ const rs=ADM.jr||[];
+ return {t:'Applications',b:`<div class="stack">${rs.length?rs.map(r=>`<div class="card stack" style="${r.status==='new'?'':'opacity:.6'}"><div class="row"><div class="grow" style="min-width:0"><b>${esc(r.name)}</b><div class="xs mut" style="overflow-wrap:anywhere">${esc(r.email)}${r.country?' · '+esc(r.country):''} · ${aDate(r.created_at)}</div></div><span class="pill ${r.status==='new'?'red':''}">${r.status==='new'?'New':r.status==='invited'?'Invited':'Declined'}</span></div>
+ ${r.how_heard?`<div class="sm">Heard about us: ${esc(r.how_heard)}</div>`:''}${r.message?`<div class="sm" style="overflow-wrap:anywhere;white-space:pre-wrap">${esc(r.message)}</div>`:''}
+ ${r.status==='new'?`<div class="row" style="flex-wrap:wrap">${aBtn('ajrinv',`data-id="${r.id}"`,`${ic('check','s')}Invite`)}${aBtn('ajrno',`data-id="${r.id}"`,'Decline','line')}</div>`:''}${r.status==='invited'&&r.invite_code?`<div class="row" style="flex-wrap:wrap"><span class="sm">Code <b>${esc(r.invite_code)}</b></span>${aBtn('acopy',`data-t="${esc(location.origin+'/?invite='+r.invite_code)}"`,ic('copy','s')+'Copy invite link','line')}</div>`:''}</div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No applications yet.</p></div>'}</div>`};
+};
+ACT.ajrinv=async d=>{
+ const r=ADM.jr.find(x=>x.id===d.id);if(!r)return;
+ const inv=await aok(sb.from('invites').insert({email:r.email,created_by:S.uid}).select().single());
+ await aok(sb.from('join_requests').update({status:'invited',invite_code:inv.code,handled_at:new Date().toISOString()}).eq('id',d.id));
+ aLog('invite_application',{code:inv.code});copy(location.origin+'/?invite='+inv.code);admReload();
+};
+ACT.ajrno=async d=>{await aok(sb.from('join_requests').update({status:'declined',handled_at:new Date().toISOString()}).eq('id',d.id));admReload()};
 
 /* ---------- settings ---------- */
 V.adm_settings=function(){
