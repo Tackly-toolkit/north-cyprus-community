@@ -16,6 +16,11 @@ Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
 
 /* ---------- translations for new text: [en, tr, pl, ru] ---------- */
 function N(o){Object.keys(o).forEach(k=>{D[k]=o[k]})}
+/* no built-in sample content: only real member and admin content is ever shown */
+[EV,CLUBS,UPD,EQ,CLIPS,POSTS,LISTINGS,DIR].forEach(a=>{a.length=0});
+Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
+Object.assign(S,{posts:[],listings:[],clips:[],dir:[],meetups:[],streak:0,unread:0});
+
 N({
  aud_members:["Members","Üyeler","Członkowie","Участники"],
  nav_market:["Marketplace","Pazar","Targ","Барахолка"],
@@ -369,7 +374,12 @@ SH.signin=s=>`<h2 class="h2">${T('sign_in')}</h2><div class="stack" style="margi
 SH.newpw=s=>`<h2 class="h2">${T('newpw_t')}</h2><div class="stack" style="margin-top:12px"><input id="np" type="password" autocomplete="new-password" placeholder="${esc(T('pw'))}" aria-label="${esc(T('pw'))}"><button class="btn block" data-act="donewpw">${T('save')}</button></div>`;
 SH.soon=()=>`<div style="text-align:center"><div class="mark" style="margin:0 auto 12px;width:64px;height:64px">${ic('island','l')}</div><h2 class="h2">${T('soon_t')}</h2><p class="mut" style="margin:10px 0 16px">${T('soon_d')}</p><button class="btn block" data-act="sclose">${T('soon_b')}</button></div>`;
 SH.due=()=>{const n=S.acct?S.acct.days_left:0;return `<div style="text-align:center"><div class="mark" style="margin:0 auto 10px;width:56px;height:56px">${ic('info','l')}</div><h2 class="h2">${T('pay_t')}</h2><div class="bignum" style="margin:10px 0">${n}</div><p style="font-weight:600">${n<=1?T('pay_left1'):F('pay_left',{n})}</p><p class="sm mut" style="margin:10px 0">${T('pay_how')}</p>${feeText()?`<p class="sm"><b>${F('pay_fee',{f:feeText()})}</b></p>`:''}${contactLine()}<button class="btn block" style="margin-top:14px" data-act="sclose">${T('gotit')}</button></div>`};
-SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}${['hospital','embassy','pharmacy_duty'].map(c=>{const it=infoOf('contact').filter(i=>i.category===c);return it.length?`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('ic_'+c)}</b>${it.map(i=>`<div class="row"><span class="grow sm" style="overflow-wrap:anywhere">${esc(i.title)}</span>${i.phone&&digits(i.phone)?`<a class="btn soft" href="tel:+${digits(i.phone)}">${ic('phone','s')}${esc(i.phone)}</a>`:''}</div>`).join('')}</div>`:''}).join('')}<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({email:DB.contact.email})}</div></div>`;
+SH.sos=()=>{
+ if(!DB.info&&!DB._ifl){DB._ifl=1;loadInfo().then(()=>{DB._ifl=0;if(S.sheet&&S.sheet.v==='sos')renderSheet()}).catch(()=>{DB._ifl=0})}
+ const rowOf=i=>`<div class="row" style="flex-wrap:wrap"><span class="grow sm" style="overflow-wrap:anywhere;min-width:0">${esc(i.title)}${i.hours?`<span class="xs mut" style="display:block">${esc(i.hours)}</span>`:''}</span>${i.phone&&digits(i.phone)?`<a class="btn soft" href="${telHref(i.phone)}">${ic('phone','s')}${esc(i.phone)}</a>`:''}${!i.phone&&i.website?`<a class="btn soft" href="${esc(/^https?:\/\//i.test(i.website)?i.website:'https://'+i.website)}" target="_blank" rel="noopener nofollow">${ic('globe','s')}${T('biz_web')}</a>`:''}</div>`;
+ const grp=(c,fold)=>{const it=infoOf('contact').filter(i=>i.category===c);if(!it.length)return '';const head=`<b>${T('ic_'+c)}</b>`;
+  return fold?`<details class="card" style="box-shadow:none;background:var(--bg)"><summary style="cursor:pointer">${head} <span class="xs mut">(${it.length})</span></summary><div class="stack" style="margin-top:8px">${it.map(rowOf).join('')}</div></details>`:`<div class="card stack" style="box-shadow:none;background:var(--bg)">${head}${it.map(rowOf).join('')}</div>`};
+ return `<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}${grp('emergency_other')}${grp('hospital')}${grp('pharmacy_duty')}${grp('fire_rescue')}${grp('police',1)}${grp('embassy',1)}<button class="btn line block" data-act="push" data-v="contacts">${T('sos_more')}</button><div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({email:DB.contact.email})}</div></div>`};
 ACT.signinsheet=()=>openSheet({v:'signin'});
 ACT.dosignin=async()=>{
  const e=val('si-e'),p=($('#si-p')||{}).value||'';
@@ -479,6 +489,7 @@ N({discounts:["Discounts","İndirimler","Zniżki","Скидки"],featured:["Fea
  biz_phone:["Phone (with country code)","Telefon (ülke koduyla)","Telefon (z numerem kierunkowym)","Телефон (с кодом страны)"],biz_wa:["WhatsApp (with country code)","WhatsApp (ülke koduyla)","WhatsApp (z numerem kierunkowym)","WhatsApp (с кодом страны)"],
  biz_hours_ph:["e.g. Mon–Sat 09:00–18:00, Sun closed","örn. Pzt–Cmt 09:00–18:00, Pazar kapalı","np. pon–sob 9:00–18:00, niedz. zamknięte","напр. пн–сб 9:00–18:00, вс выходной"],biz_saved:["Saved","Kaydedildi","Zapisano","Сохранено"]});
 const digits=x=>String(x||'').replace(/[^\d]/g,'');
+const telHref=x=>{const d=digits(String(x||'').split('/')[0]);return d?(d.length<=4?'tel:'+d:'tel:+'+d):''};
 function bizContact(b){
  const rows=[];
  if(b.hours)rows.push(`<div class="row">${ic('clock')}<div class="grow"><div class="xs mut">${T('biz_hours')}</div><b style="overflow-wrap:anywhere;white-space:pre-wrap">${esc(b.hours)}</b></div></div>`);
@@ -514,12 +525,15 @@ document.addEventListener('input',e=>{
  if(e.target.id==='cv-t'){const g=$('#cv-g');if(g)g.value=e.target.value===''?'':Math.round(parseFloat(e.target.value)/r*100)/100}
 });
 N({m_places:["Places to visit","Gezilecek yerler","Miejsca do zwiedzania","Что посмотреть"],m_contacts:["Useful contacts","Faydalı numaralar","Przydatne kontakty","Полезные контакты"],m_map:["Map of the north","Kuzey haritası","Mapa północy","Карта севера"],
+ ic_police:["Police stations","Polis karakolları","Posterunki policji","Отделения полиции"],ic_fire_rescue:["Fire service","İtfaiye","Straż pożarna","Пожарная служба"],ic_emergency_other:["Other emergency numbers","Diğer acil numaralar","Inne numery alarmowe","Другие экстренные номера"],
+ sos_more:["All emergency and useful contacts","Tüm acil ve faydalı iletişim bilgileri","Wszystkie numery alarmowe i kontakty","Все экстренные и полезные контакты"],
  ic_hospital:["Hospitals","Hastaneler","Szpitale","Больницы"],ic_embassy:["Embassies","Büyükelçilikler","Ambasady","Посольства"],ic_pharmacy_duty:["Pharmacies on duty","Nöbetçi eczaneler","Apteki dyżurne","Дежурные аптеки"],ic_muktar:["Muktars","Muhtarlar","Muhtarzy","Мухтары"],ic_municipality:["Municipalities","Belediyeler","Urzędy miejskie","Муниципалитеты"],ic_government:["Government departments","Devlet daireleri","Urzędy państwowe","Госучреждения"],ic_transport:["Airports, ports and borders","Havalimanı, liman ve sınır kapıları","Lotniska, porty i przejścia","Аэропорты, порты и КПП"],ic_power:["Power cuts","Elektrik kesintileri","Przerwy w dostawie prądu","Отключения электричества"],
  ic_museum:["Museums","Müzeler","Muzea","Музеи"],ic_historic:["Historic places","Tarihi yerler","Miejsca historyczne","Исторические места"],ic_beach:["Beaches","Plajlar","Plaże","Пляжи"],ic_nature:["Nature and walks","Doğa ve yürüyüş","Natura i spacery","Природа и прогулки"],ic_other:["Other","Diğer","Inne","Другое"],
  ii_empty:["Nothing here yet. We only add details we have checked.","Henüz bir şey yok. Yalnızca kontrol ettiğimiz bilgileri ekliyoruz.","Na razie nic. Dodajemy tylko sprawdzone informacje.","Пока пусто. Мы добавляем только проверенные сведения."],
  ii_checked:["Checked {d}","Kontrol: {d}","Sprawdzono: {d}","Проверено: {d}"],ii_source:["Source","Kaynak","Źródło","Источник"],ii_fee:["Entry","Giriş","Wstęp","Вход"],ii_maps:["Open in Google Maps","Google Haritalar'da aç","Otwórz w Mapach Google","Открыть в Google Картах"],
  map_note:["A simple picture of the north, not to scale. Tap a district to open it in Google Maps.","Kuzeyin basit bir resmi, ölçekli değildir. Google Haritalar'da açmak için bir ilçeye dokunun.","Prosty rysunek północy, nie w skali. Dotknij dystryktu, aby otworzyć w Mapach Google.","Схематичная карта севера, не в масштабе. Нажмите на округ, чтобы открыть его в Google Картах."]});
-const INFO_P=['museum','historic','beach','nature','other'],INFO_C=['hospital','embassy','pharmacy_duty','muktar','municipality','government','transport','power'];
+N({gal_note:["","","",""],checkin_d:["","","",""],mcard_t:["Member card","Üye kartı","Karta członka","Карта члена"],eq_sub:["","","",""],mem_join:["Join","Katıl","Dołącz","Присоединиться"],mem_np:["","","",""],mem_ok:["","","",""],mem_note:["","","",""],mem_p3:["","","",""],sos_wel:["","","",""],sos_wel_n:["","","",""],sos_buddy:["","","",""],sos_buddy_ok:["","","",""],j_demo:["","","",""],n4:["","","",""],f_demo:["","","",""],reset:["Sign out","Çıkış yap","Wyloguj","Выйти"]});
+const INFO_P=['museum','historic','beach','nature','other'],INFO_C=['hospital','pharmacy_duty','police','fire_rescue','emergency_other','embassy','muktar','municipality','government','transport','power'];
 DB.info=[];
 const infoOf=k=>(DB.info||[]).filter(i=>i.kind===k);
 async function loadInfo(){const r=await sb.from('info_items').select('*').eq('active',true).order('sort').order('title');DB.info=r.data||[]}
@@ -529,7 +543,7 @@ function infoCard(i){
  if(i.hours)rows.push(`<div class="row">${ic('clock','s')}<span class="grow sm">${esc(i.hours)}</span></div>`);
  if(i.fee)rows.push(`<div class="row"><span class="sm mut">${T('ii_fee')}</span><b class="grow sm">${esc(i.fee)}</b></div>`);
  const b=[];
- if(i.phone&&digits(i.phone))b.push(`<a class="btn soft grow" href="tel:+${digits(i.phone)}">${ic('phone','s')}${esc(i.phone)}</a>`);
+ if(i.phone&&digits(i.phone))b.push(`<a class="btn soft grow" href="${telHref(i.phone)}">${ic('phone','s')}${esc(i.phone)}</a>`);
  if(i.map_query)b.push(`<a class="btn line grow" href="${mapsUrl(i.map_query)}" target="_blank" rel="noopener">${ic('compass','s')}${T('ii_maps')}</a>`);
  if(i.website){const u=/^https?:\/\//i.test(i.website)?i.website:'https://'+i.website;b.push(`<a class="btn line grow" href="${esc(u)}" target="_blank" rel="noopener nofollow">${ic('globe','s')}${T('biz_web')}</a>`)}
  if(b.length)rows.push(`<div class="row" style="flex-wrap:wrap">${b.join('')}</div>`);
@@ -1216,3 +1230,5 @@ function openDeepLink(){
   if(iv&&!S.uid){S.su={step:1,type:'ind',dir:true,inv:iv};push('signup')}
  }catch(e){sbErr(e);render()}
 })();
+
+['member','equip','equipitem','watch','clip','app','checkin','buddy','joinmem','reset'].forEach(k=>{delete V[k]});
