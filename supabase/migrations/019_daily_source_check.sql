@@ -1,0 +1,5 @@
+-- Applied live as 019_daily_source_check, 019b and 019c. Daily check of readable official pages (05:30 UTC).
+-- Tables: source_snapshots. Function: public.check_official_sources() (security definer, not callable by members).
+-- It fetches each active official_sources row marked readable='yes', strips scripts and tags, hashes the text,
+-- and adds an "update_review" row (origin 'daily check') when the text differs from the last check.
+-- Schedule: select cron.schedule('check-official-sources','30 5 * * *', $$select public.check_official_sources()$$);
