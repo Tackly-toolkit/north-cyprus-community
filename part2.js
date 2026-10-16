@@ -180,16 +180,16 @@ const EQ=[
 {id:'e4',ic:'tool',n:["Shower chair","Duş sandalyesi","Krzesło pod prysznic","Стул для душа"]}
 ];
 const CK=[
-["Register with TFR","TFR'ye kayıt olun","Zarejestruj się w TFR","Зарегистрируйтесь в TFR"],
+["Complete your profile with a photo and your area","Profilinizi fotoğraf ve bölgenizle tamamlayın","Uzupełnij profil o zdjęcie i okolicę","Дополните профиль фото и районом"],
 ["Apply for or renew your residence permit","Oturum izninizi başvurun veya yenileyin","Złóż wniosek o pobyt lub przedłuż go","Подайте или продлите вид на жительство"],
 ["Open a bank account","Banka hesabı açın","Załóż konto bankowe","Откройте банковский счёт"],
 ["Get a local SIM card","Yerel SIM kart alın","Kup lokalną kartę SIM","Купите местную SIM-карту"],
 ["Register with a doctor","Bir doktora kaydolun","Zarejestruj się u lekarza","Зарегистрируйтесь у врача"],
 ["Save the emergency numbers","Acil numaraları kaydedin","Zapisz numery alarmowe","Сохраните экстренные номера"],
 ["Learn your bin and recycling days","Çöp ve geri dönüşüm günlerinizi öğrenin","Poznaj dni wywozu śmieci i recyklingu","Узнайте дни вывоза мусора и переработки"],
-["Join a Tuesday coffee","Bir Salı kahvesine katılın","Dołącz do wtorkowej kawy","Приходите на вторничный кофе"],
+["Come along to a community meetup","Bir topluluk buluşmasına katılın","Dołącz do spotkania społeczności","Приходите на встречу сообщества"],
 ["Join a club that fits you","Size uygun bir kulübe katılın","Dołącz do pasującego klubu","Вступите в подходящий клуб"],
-["Sign up to Ping Pal Buddy","Ping Pal Buddy'ye kaydolun","Zapisz się do Ping Pal Buddy","Зарегистрируйтесь в Ping Pal Buddy"]
+["Add a friend and say hello in the feed","Bir arkadaş ekleyin ve akışta merhaba deyin","Dodaj znajomego i przywitaj się w aktualnościach","Добавьте друга и поздоровайтесь в ленте"]
 ];
 const UPD=[
 {id:'u1',date:'2026-08-08',t:["New property rules for foreigners","Yabancılar için yeni mülk kuralları","Nowe zasady nabywania nieruchomości przez cudzoziemców","Новые правила приобретения недвижимости иностранцами"],b:["The rules for foreigners buying property have changed. TFR volunteers have summarised what it means for you.","Yabancıların mülk edinme kuralları değişti. TFR gönüllüleri sizin için ne anlama geldiğini özetledi.","Zasady zakupu nieruchomości przez cudzoziemców się zmieniły. Wolontariusze TFR podsumowali, co to oznacza.","Правила покупки недвижимости иностранцами изменились. Волонтёры TFR кратко объяснили, что это значит."]},
