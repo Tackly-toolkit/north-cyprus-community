@@ -36,6 +36,7 @@ async function admLoad(sec,x){
   ADM.reports=rows;ADM.prev=prev;await loadPeople(rows.map(r=>r.reporter));
  }
  if(sec==='directory'){ADM.dir=await aok(sb.from('directory').select('*').order('status',{ascending:false}).order('created_at',{ascending:false}))}
+ if(sec==='info'){ADM.info=await aok(sb.from('info_items').select('*').order('kind').order('category').order('title'))}
  if(sec==='banners'){ADM.banners=await aok(sb.from('banners').select('*').order('created_at',{ascending:false}))}
  if(sec==='requests'){ADM.req=await aok(sb.from('other_requests').select('*').order('status',{ascending:false}).order('created_at',{ascending:false}).limit(100));await loadPeople(ADM.req.map(r=>r.requested_by))}
  if(sec==='places'){ADM.geo=await aok(sb.from('geo').select('*').order('sort').order('id'))}
@@ -75,6 +76,7 @@ V.admin=function(){
  ${r('joinreq','Applications','People asking to join (Apply to join)',0,ADM.jrn)}
  ${r('members','Members','Search, lock, suspend')}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
+ ${r('info','Places and useful contacts','Places to visit, pharmacies, muktars, government, airports and borders')}
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
  ${r('requests','"Other, please tell us" requests','New towns, areas and categories asked for',0,s.open_requests)}
  ${r('invites','Sign-up and invites','Open or invitation only, invite codes')}
@@ -142,6 +144,24 @@ ACT.adel=async d=>{
  if(S.adelc!==d.id){S.adelc=d.id;renderOv(true);return}
  S.adelc=null;await aok(sb.rpc('admin_delete_user',{p_id:d.id}));toast('Deleted');pop();admReload();
 };
+
+/* ---------- places and useful contacts ---------- */
+const ICAT={place:INFO_P,contact:INFO_C};
+V.adm_info=function(){
+ const k=S.aik||'contact',its=(ADM.info||[]).filter(i=>i.kind===k);
+ const fld=(i,id,label,type)=>`<label class="f" for="i-${id}-${i.id}">${label}</label><input id="i-${id}-${i.id}" ${type?`type="${type}"`:''} value="${esc(i[id]==null?'':i[id])}">`;
+ const form=i=>`<label class="f" for="i-category-${i.id}">Category</label><select id="i-category-${i.id}">${ICAT[i.kind].map(c=>`<option value="${c}" ${i.category===c?'selected':''}>${T('ic_'+c)}</option>`).join('')}</select>${fld(i,'title','Name')}<label class="f" for="i-body-${i.id}">Details</label><textarea id="i-body-${i.id}" maxlength="1200" style="min-height:70px">${esc(i.body||'')}</textarea>${fld(i,'hours','Opening times')}${i.kind==='place'?fld(i,'fee','Entry fee'):''}${fld(i,'phone','Phone (with country code)')}${fld(i,'website','Website')}${fld(i,'map_query','Place name for Google Maps')}${fld(i,'source_url','Source link (official page)')}${fld(i,'checked_on','Last checked','date')}`;
+ return {t:'Places and contacts',b:`<div class="stack"><div class="seg"><button class="${k==='contact'?'on':''}" data-act="aik" data-id="contact">Useful contacts</button><button class="${k==='place'?'on':''}" data-act="aik" data-id="place">Places to visit</button></div>
+ <div class="note g">${ic('info')}<div class="sm">Only add what you have checked on the official page. Add the source link and the date you checked. Members see nothing here until you add entries.</div></div>
+ <div class="card stack"><b>Add new</b>${form({id:'new',kind:k,category:ICAT[k][0]})}${aBtn('ainfoadd',`${ic('plus','s')}Add`,`data-k="${k}"`,'')}</div>
+ ${its.map(i=>`<div class="card stack" style="${i.active?'':'opacity:.55'}"><b style="overflow-wrap:anywhere">${esc(i.title)}</b>${form(i)}<div class="row" style="flex-wrap:wrap">${aBtn('ainfosave',`data-id="${i.id}" data-k="${i.kind}"`,'Save')}${aBtn('ainfotog',`data-id="${i.id}" data-v="${i.active?0:1}"`,i.active?'Hide':'Show','line')}${aBtn('ainfodel',`data-id="${i.id}"`,ic('trash','s'),'line')}</div></div>`).join('')}</div>`};
+};
+const infoRow=(id,k)=>{const g=f=>val('i-'+f+'-'+id)||null;return {kind:k,category:val('i-category-'+id),title:val('i-title-'+id),body:g('body'),hours:g('hours'),fee:k==='place'?g('fee'):null,phone:g('phone'),website:g('website'),map_query:g('map_query'),source_url:g('source_url'),checked_on:g('checked_on')}};
+ACT.aik=d=>{S.aik=d.id;renderOv(true)};
+ACT.ainfoadd=async d=>{const r=infoRow('new',d.k);if(!r.title||r.title.length<2)return toast('Add a name');await aok(sb.from('info_items').insert(r));aLog('info_add',{t:r.title});toast('Added');await admReload();loadInfo()};
+ACT.ainfosave=async d=>{const r=infoRow(d.id,d.k);await aok(sb.from('info_items').update(r).eq('id',d.id));aLog('info_edit',{id:d.id});toast('Saved');await admReload();loadInfo()};
+ACT.ainfotog=async d=>{await aok(sb.from('info_items').update({active:d.v==='1'}).eq('id',d.id));await admReload();loadInfo()};
+ACT.ainfodel=async d=>{await aok(sb.from('info_items').delete().eq('id',d.id));await admReload();loadInfo()};
 
 /* ---------- invites + sign-up mode ---------- */
 V.adm_invites=function(){
