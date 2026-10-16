@@ -259,6 +259,7 @@ async function loadContent(){
  S.joined={};DB.clubCount={};
  (cq.data||[]).forEach(x=>{S.joined[x.club_id]=true});
  (nq.data||[]).forEach(x=>{DB.clubCount[x.club_id]=Number(x.n)});
+ await loadInfo();
  await loadExtras();
  S.cl=1;
 }
@@ -366,7 +367,7 @@ SH.signin=s=>`<h2 class="h2">${T('sign_in')}</h2><div class="stack" style="margi
 SH.newpw=s=>`<h2 class="h2">${T('newpw_t')}</h2><div class="stack" style="margin-top:12px"><input id="np" type="password" autocomplete="new-password" placeholder="${esc(T('pw'))}" aria-label="${esc(T('pw'))}"><button class="btn block" data-act="donewpw">${T('save')}</button></div>`;
 SH.soon=()=>`<div style="text-align:center"><div class="mark" style="margin:0 auto 12px;width:64px;height:64px">${ic('island','l')}</div><h2 class="h2">${T('soon_t')}</h2><p class="mut" style="margin:10px 0 16px">${T('soon_d')}</p><button class="btn block" data-act="sclose">${T('soon_b')}</button></div>`;
 SH.due=()=>{const n=S.acct?S.acct.days_left:0;return `<div style="text-align:center"><div class="mark" style="margin:0 auto 10px;width:56px;height:56px">${ic('info','l')}</div><h2 class="h2">${T('pay_t')}</h2><div class="bignum" style="margin:10px 0">${n}</div><p style="font-weight:600">${n<=1?T('pay_left1'):F('pay_left',{n})}</p><p class="sm mut" style="margin:10px 0">${T('pay_how')}</p>${feeText()?`<p class="sm"><b>${F('pay_fee',{f:feeText()})}</b></p>`:''}${contactLine()}<button class="btn block" style="margin-top:14px" data-act="sclose">${T('gotit')}</button></div>`};
-SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({email:DB.contact.email})}</div></div>`;
+SH.sos=()=>`<div class="row"><span class="lf" style="background:var(--rs);color:var(--r)">${ic('buoy','l')}</span><div><h2 class="h2">${T('sos_t')}</h2><div class="sm mut">${T('sos_d')}</div></div></div><div class="stack" style="margin-top:14px">${sosRow(T('sos_pol'),'155')}${sosRow(T('sos_amb'),'112')}${sosRow(T('sos_fire'),'199')}${['hospital','embassy','pharmacy_duty'].map(c=>{const it=infoOf('contact').filter(i=>i.category===c);return it.length?`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('ic_'+c)}</b>${it.map(i=>`<div class="row"><span class="grow sm" style="overflow-wrap:anywhere">${esc(i.title)}</span>${i.phone&&digits(i.phone)?`<a class="btn soft" href="tel:+${digits(i.phone)}">${ic('phone','s')}${esc(i.phone)}</a>`:''}</div>`).join('')}</div>`:''}).join('')}<div class="card stack" style="box-shadow:none;background:var(--bg)"><b>${T('sos_adm')}</b>${contactRows({email:DB.contact.email})}</div></div>`;
 ACT.signinsheet=()=>openSheet({v:'signin'});
 ACT.dosignin=async()=>{
  const e=val('si-e'),p=($('#si-p')||{}).value||'';
@@ -463,7 +464,7 @@ ACT.cmtsend=async d=>{
 
 /* ---------- explore (no TFR-specific modules) ---------- */
 function exploreV(){
- const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺']];
+ const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺'],['northmap','map',T('m_map'),'']].concat(infoOf('place').length?[['places','pin',T('m_places'),infoOf('place').length+'']]:[],infoOf('contact').length?[['contacts','phone',T('m_contacts'),infoOf('contact').length+'']]:[]);
  return `<div class="stack">${notes()}<div class="hero"><h1 class="h1" style="max-width:85%">${T('tagline')}</h1><p style="margin-top:8px;max-width:85%" class="mut">${T('exp_hero_d')}</p></div>${bannerHtml('explore')}${featuredSpot()}
  <div class="grid2">${mods.map(m=>`<button class="mod" data-act="push" data-v="${m[0]}"><span class="lf">${ic(m[1])}</span><b>${m[2]}</b><small>${m[3]}</small></button>`).join('')}</div>
  ${appCard()}${footerV()}</div>`;
@@ -510,6 +511,42 @@ document.addEventListener('input',e=>{
  if(e.target.id==='cv-g'){const t=$('#cv-t');if(t)t.value=e.target.value===''?'':Math.round(parseFloat(e.target.value)*r*100)/100}
  if(e.target.id==='cv-t'){const g=$('#cv-g');if(g)g.value=e.target.value===''?'':Math.round(parseFloat(e.target.value)/r*100)/100}
 });
+N({m_places:["Places to visit","Gezilecek yerler","Miejsca do zwiedzania","Что посмотреть"],m_contacts:["Useful contacts","Faydalı numaralar","Przydatne kontakty","Полезные контакты"],m_map:["Map of the north","Kuzey haritası","Mapa północy","Карта севера"],
+ ic_hospital:["Hospitals","Hastaneler","Szpitale","Больницы"],ic_embassy:["Embassies","Büyükelçilikler","Ambasady","Посольства"],ic_pharmacy_duty:["Pharmacies on duty","Nöbetçi eczaneler","Apteki dyżurne","Дежурные аптеки"],ic_muktar:["Muktars","Muhtarlar","Muhtarzy","Мухтары"],ic_municipality:["Municipalities","Belediyeler","Urzędy miejskie","Муниципалитеты"],ic_government:["Government departments","Devlet daireleri","Urzędy państwowe","Госучреждения"],ic_transport:["Airports, ports and borders","Havalimanı, liman ve sınır kapıları","Lotniska, porty i przejścia","Аэропорты, порты и КПП"],ic_power:["Power cuts","Elektrik kesintileri","Przerwy w dostawie prądu","Отключения электричества"],
+ ic_museum:["Museums","Müzeler","Muzea","Музеи"],ic_historic:["Historic places","Tarihi yerler","Miejsca historyczne","Исторические места"],ic_beach:["Beaches","Plajlar","Plaże","Пляжи"],ic_nature:["Nature and walks","Doğa ve yürüyüş","Natura i spacery","Природа и прогулки"],ic_other:["Other","Diğer","Inne","Другое"],
+ ii_empty:["Nothing here yet. We only add details we have checked.","Henüz bir şey yok. Yalnızca kontrol ettiğimiz bilgileri ekliyoruz.","Na razie nic. Dodajemy tylko sprawdzone informacje.","Пока пусто. Мы добавляем только проверенные сведения."],
+ ii_checked:["Checked {d}","Kontrol: {d}","Sprawdzono: {d}","Проверено: {d}"],ii_source:["Source","Kaynak","Źródło","Источник"],ii_fee:["Entry","Giriş","Wstęp","Вход"],ii_maps:["Open in Google Maps","Google Haritalar'da aç","Otwórz w Mapach Google","Открыть в Google Картах"],
+ map_note:["A simple picture of the north, not to scale. Tap a district to open it in Google Maps.","Kuzeyin basit bir resmi, ölçekli değildir. Google Haritalar'da açmak için bir ilçeye dokunun.","Prosty rysunek północy, nie w skali. Dotknij dystryktu, aby otworzyć w Mapach Google.","Схематичная карта севера, не в масштабе. Нажмите на округ, чтобы открыть его в Google Картах."]});
+const INFO_P=['museum','historic','beach','nature','other'],INFO_C=['hospital','embassy','pharmacy_duty','muktar','municipality','government','transport','power'];
+DB.info=[];
+const infoOf=k=>(DB.info||[]).filter(i=>i.kind===k);
+async function loadInfo(){const r=await sb.from('info_items').select('*').eq('active',true).order('sort').order('title');DB.info=r.data||[]}
+function infoCard(i){
+ const rows=[];
+ if(i.body)rows.push(`<div style="overflow-wrap:anywhere;white-space:pre-wrap">${esc(i.body)}</div>`);
+ if(i.hours)rows.push(`<div class="row">${ic('clock','s')}<span class="grow sm">${esc(i.hours)}</span></div>`);
+ if(i.fee)rows.push(`<div class="row"><span class="sm mut">${T('ii_fee')}</span><b class="grow sm">${esc(i.fee)}</b></div>`);
+ const b=[];
+ if(i.phone&&digits(i.phone))b.push(`<a class="btn soft grow" href="tel:+${digits(i.phone)}">${ic('phone','s')}${esc(i.phone)}</a>`);
+ if(i.map_query)b.push(`<a class="btn line grow" href="${mapsUrl(i.map_query)}" target="_blank" rel="noopener">${ic('compass','s')}${T('ii_maps')}</a>`);
+ if(i.website){const u=/^https?:\/\//i.test(i.website)?i.website:'https://'+i.website;b.push(`<a class="btn line grow" href="${esc(u)}" target="_blank" rel="noopener nofollow">${ic('globe','s')}${T('biz_web')}</a>`)}
+ if(b.length)rows.push(`<div class="row" style="flex-wrap:wrap">${b.join('')}</div>`);
+ const src=[i.checked_on?F('ii_checked',{d:ymd(i.checked_on)}):'',i.source_url?`<a href="${esc(i.source_url)}" target="_blank" rel="noopener nofollow">${T('ii_source')}</a>`:''].filter(Boolean).join(' · ');
+ return `<div class="card stack"><b style="overflow-wrap:anywhere">${esc(i.title)}</b>${rows.join('')}${src?`<div class="xs mut">${src}</div>`:''}</div>`;
+}
+function infoView(kind,cats,title){
+ const all=infoOf(kind),cur=S['icat_'+kind]||'all',list=all.filter(i=>cur==='all'||i.category===cur),have=cats.filter(c=>all.some(i=>i.category===c));
+ return {t:title,b:`<div class="stack">${all.length?`<div class="chips"><button class="chip ${cur==='all'?'on':''}" data-act="icat" data-k="${kind}" data-id="all">${T('all')}</button>${have.map(c=>`<button class="chip ${cur===c?'on':''}" data-act="icat" data-k="${kind}" data-id="${c}">${T('ic_'+c)}</button>`).join('')}</div>${list.map(infoCard).join('')}`:`<div class="card" style="text-align:center"><p class="mut">${T('ii_empty')}</p></div>`}</div>`};
+}
+ACT.icat=d=>{S['icat_'+d.k]=d.id;renderOv(true)};
+V.places=()=>infoView('place',INFO_P,T('m_places'));
+V.contacts=()=>infoView('contact',INFO_C,T('m_contacts'));
+V.northmap=function(){
+ const pins={girne:[179.1,87.9],lefkosa:[187,118.3],gazimagusa:[275.4,129.7],iskele:[269.1,97.4],guzelyurt:[126.9,114.5]};
+ const ds=gKids(null,'district');
+ const svg=`<svg viewBox="0 0 400 160" role="img" aria-label="${esc(T('m_map'))}" style="width:100%;height:auto;display:block"><rect width="400" height="160" rx="16" fill="var(--gs)"/><polygon points="65.3,118.3 81.1,95.5 117.4,76.5 152.2,84.1 179.1,87.9 231.2,86 270.7,76.5 294.4,57.5 333.9,38.5 378.1,21.4 373.4,48 349.7,67 310.2,95.5 278.6,114.5 273.9,133.5 267.5,143 231.2,133.5 187,122.1 144.3,129.7 104.8,137.3 81.1,129.7" fill="var(--card)" stroke="var(--g)" stroke-width="2" stroke-linejoin="round"/>${ds.map(d=>{const p=pins[d.id];return p?`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--r)"/><text x="${p[0]}" y="${p[1]-10}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--fg)">${esc(d.names[0])}</text>`:''}).join('')}</svg>`;
+ return {t:T('m_map'),b:`<div class="stack"><div class="card" style="padding:8px">${svg}</div><p class="sm mut">${T('map_note')}</p>${ds.map(d=>`<a class="listrow" href="${mapsUrl(d.names[0]+' district')}" target="_blank" rel="noopener"><span class="lf">${ic('pin')}</span><span class="grow"><b>${esc(gOpt(d))}</b></span>${ic('compass')}</a>`).join('')}</div>`};
+};
 function footerV(){
  const c=DB.contact;
  return `<div class="foot"><button class="fx" data-act="footer" aria-expanded="${S.footer}" title="${T('footer')}" aria-label="${T('footer')}">${ic(S.footer?'up':'down')}</button>${S.footer?`<div class="fb card"><div class="row" style="flex-wrap:wrap;gap:16px"><a href="#" data-act="push" data-v="policy" data-id="about">${T('f_about')}</a><a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a><a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a><a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a><a href="#" data-act="push" data-v="policy" data-id="contact">${T('f_contact')}</a></div></div>`:''}</div>`;
