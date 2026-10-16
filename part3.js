@@ -49,7 +49,7 @@ function postMedia(p){const m=MV['p'+p.id];if(!m&&!p.up)return '';return `<div s
 
 /* ---------- chrome ---------- */
 function renderTop(){
- $('#top').innerHTML=`<button class="logo" data-act="tab" data-id="feed" title="${SITE_NAME}"><span class="mark">${ic('island','l')}</span><span class="t">${SITE_SHORT}</span></button>
+ $('#top').innerHTML=`<button class="logo" data-act="tab" data-id="feed" title="${SITE_NAME}"><span class="mark" style="background:none;border-radius:8px;overflow:hidden"><img src="/icon.svg" width="32" height="32" alt=""></span><span class="t">${SITE_SHORT}</span></button>
  <button class="ib" data-act="push" data-v="search" title="${T('search')}" aria-label="${T('search')}">${ic('search')}</button>
  <button class="ib" data-act="sheet" data-v="lang" title="${T('lang')}" aria-label="${T('lang')}">${ic('globe')}</button>
  <button class="ib" data-act="bell" title="${T('notifs')}" aria-label="${T('notifs')}">${ic('bell')}${isM()&&S.nunread?`<span class="dot">${S.nunread}</span>`:''}</button>

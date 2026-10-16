@@ -18,7 +18,6 @@ Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
 function N(o){Object.keys(o).forEach(k=>{D[k]=o[k]})}
 /* no built-in sample content: only real member and admin content is ever shown */
 [EV,CLUBS,UPD,EQ,CLIPS,POSTS,LISTINGS,DIR].forEach(a=>{a.length=0});
-Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
 Object.assign(S,{posts:[],listings:[],clips:[],dir:[],meetups:[],streak:0,unread:0});
 
 N({
@@ -428,7 +427,7 @@ V.signup=function(){
   <div class="card"><label class="f" for="su-e">${T('su_email')}</label><input id="su-e" type="email" inputmode="email" autocomplete="email" value="${esc(u.email||'')}"><label class="f" for="su-p">${T('pw')}</label><input id="su-p" type="password" autocomplete="new-password" value="${esc(u.pw||'')}">
   ${DB.cfg.signup_mode==='invite'?`<label class="f" for="su-i">${T('su_invite')}</label><input id="su-i" value="${esc(u.inv||'')}" maxlength="40"><p class="xs mut" style="margin-top:6px">${T('su_invite_d')}</p><button class="btn line block" style="margin-top:10px" data-act="applyopen">${T('ap_btn')}</button>`:''}</div>
   ${biz?`<button class="opt ${u.dir?'on':''}" data-act="sudir"><span class="lf">${ic(u.dir?'check':'plus')}</span><span style="flex:1"><b>${T('su_dir')}</b><div class="sm mut">${T('su_dir_d')}</div></span></button>`:''}
-  <label class="row" style="gap:10px;align-items:flex-start"><input id="su-ag" type="checkbox" style="width:22px;height:22px;margin-top:2px" ${u.agree?'checked':''}><span class="sm">${T('su_agree')} <a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a> · <a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a> · <a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a></span></label>
+  <label class="row" style="gap:10px;align-items:flex-start"><input id="su-ag" type="checkbox" style="width:22px;height:22px;margin-top:2px" ${u.agree?'checked':''}><span class="sm">${T('su_agree')} <a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a>${isStandalone()?'':`<a href="#" data-act="push" data-v="app">${T('get_app')}</a>`} · <a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a> · <a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a></span></label>
   ${u.err?`<div class="note">${ic('info')}<div class="sm">${esc(u.err)}</div></div>`:''}
   <button class="btn block" data-act="sunext" ${u.busy?'disabled':''}>${T('finish')}</button></div>`};
  return {t:T('ce_t'),b:`<div class="stack"><div class="hero" style="text-align:center"><div class="mark" style="margin:0 auto 12px;width:56px;height:56px">${ic('msg','l')}</div><h1 class="h1" style="max-width:100%">${T('ce_t')}</h1><p class="mut" style="margin-top:8px">${F('ce_d',{e:esc(u.email)})}</p><p class="sm mut" style="margin-top:8px">${T('ce_spam')}</p></div><p class="sm mut" style="text-align:center">${F('welcome_free',{n:DB.cfg.free_months||3})}</p><button class="btn block" data-act="signinfromsu">${T('sign_in')}</button></div>`};
@@ -1048,6 +1047,36 @@ const VAPID_PUB='BFuPJZW3P_9VnehJ5ryKIevdm6B_eWB_mLCSnbyMJbgAsOwJLTGGTrF7iKLNUXC
 const pushOk=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
 const isIos=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
 const isStandalone=()=>(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+
+/* ---------- install on phone (PWA) ---------- */
+window.NC_IP=null;
+try{S.appos=isIos()?'ios':'and'}catch(x){}
+try{if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('/sw.js').catch(()=>{}))}catch(x){}
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();window.NC_IP=e;try{renderTop();if(S.stack&&S.stack.length&&S.stack[S.stack.length-1].v==='app')renderOv(true)}catch(x){}});
+window.addEventListener('appinstalled',()=>{window.NC_IP=null;try{renderTop();toast(T('inst_ok'))}catch(x){}});
+N({get_app:["Install on phone","Telefona yükle","Zainstaluj na telefonie","Установить на телефон"],
+app_d:["Add North Cyprus Community to your home screen. It opens full screen like an app and can send you alerts.","North Cyprus Community'yi ana ekranınıza ekleyin. Uygulama gibi tam ekran açılır ve size bildirim gönderebilir.","Dodaj North Cyprus Community do ekranu głównego. Otwiera się na pełnym ekranie jak aplikacja i może wysyłać powiadomienia.","Добавьте North Cyprus Community на главный экран. Откроется на весь экран, как приложение, и сможет присылать уведомления."],
+inst_now:["Install now","Şimdi yükle","Zainstaluj teraz","Установить сейчас"],
+inst_ok:["Installed. Look for it on your home screen.","Yüklendi. Ana ekranınızda arayın.","Zainstalowano. Szukaj na ekranie głównym.","Установлено. Ищите на главном экране."],
+inst_have:["You are already using the installed app.","Yüklü uygulamayı zaten kullanıyorsunuz.","Korzystasz już z zainstalowanej aplikacji.","Вы уже используете установленное приложение."],
+inst_steps:["Or follow these steps","Veya şu adımları izleyin","Lub wykonaj te kroki","Или выполните эти шаги"],
+inst_ios_note:["On iPhone and iPad this only works in Safari. Alerts on iPhone work once the app is on your home screen.","iPhone ve iPad'de bu yalnızca Safari'de çalışır. iPhone'da bildirimler uygulama ana ekrandayken çalışır.","Na iPhonie i iPadzie działa to tylko w Safari. Powiadomienia na iPhonie działają po dodaniu aplikacji do ekranu głównego.","На iPhone и iPad это работает только в Safari. Уведомления на iPhone работают, когда приложение добавлено на главный экран."],
+inst_desk:["On a computer with Chrome or Edge, look for the install icon at the right end of the address bar.","Chrome veya Edge ile bilgisayarda adres çubuğunun sağındaki yükle simgesine bakın.","Na komputerze z Chrome lub Edge poszukaj ikony instalacji po prawej stronie paska adresu.","На компьютере с Chrome или Edge ищите значок установки справа в адресной строке."],
+ai2:["Tap the Share button (the square with an arrow, at the bottom of Safari)","Paylaş düğmesine dokunun (Safari'nin altındaki oklu kare)","Dotknij przycisku Udostępnij (kwadrat ze strzałką u dołu Safari)","Нажмите «Поделиться» (квадрат со стрелкой внизу Safari)"],
+ai3:["Scroll down and choose “Add to Home Screen”, then tap Add","Aşağı kaydırıp “Ana Ekrana Ekle”yi seçin, sonra Ekle'ye dokunun","Przewiń w dół, wybierz „Do ekranu początkowego” i dotknij Dodaj","Прокрутите вниз, выберите «На экран “Домой”» и нажмите «Добавить»"],
+aa2:["Tap the ⋮ menu at the top right","Sağ üstteki ⋮ menüsüne dokunun","Dotknij menu ⋮ w prawym górnym rogu","Нажмите меню ⋮ в правом верхнем углу"],
+aa3:["Choose “Install app” (or “Add to Home screen”), then tap Install","“Uygulamayı yükle” (veya “Ana ekrana ekle”) seçin, sonra Yükle'ye dokunun","Wybierz „Zainstaluj aplikację” (lub „Dodaj do ekranu głównego”) i dotknij Zainstaluj","Выберите «Установить приложение» (или «Добавить на главный экран») и нажмите «Установить»"]});
+function appCard(){if(isStandalone())return '';return `<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="app"><span class="lf" style="width:46px;height:46px;background:var(--gs);color:var(--gd)">${ic('phone2')}</span><div class="grow"><b>${T('get_app')}</b><div class="sm mut">${T('app_d')}</div></div>${ic('right')}</button>`}
+V.app=function(){
+ const ios=S.appos?S.appos==='ios':isIos();
+ const native=window.NC_IP&&!isStandalone();
+ return {t:T('get_app'),b:`<div class="stack"><div class="hero"><img src="/icon.svg" width="64" height="64" alt="" style="border-radius:16px;display:block"><h1 class="h1" style="margin-top:12px;max-width:100%">${T('get_app')}</h1><p class="mut" style="margin-top:6px">${T('app_d')}</p></div>
+ ${isStandalone()?`<div class="card sm">${T('inst_have')}</div>`:`${native?`<button class="btn block" data-act="installnow">${T('inst_now')}</button><div class="sm mut" style="text-align:center">${T('inst_steps')}</div>`:''}
+ <div class="seg"><button class="${ios?'on':''}" data-act="appos" data-id="ios">${T('app_ios')}</button><button class="${ios?'':'on'}" data-act="appos" data-id="and">${T('app_and')}</button></div>
+ ${(ios?['ai1','ai2','ai3']:['aa1','aa2','aa3']).map((k,i)=>`<div class="step"><span class="num">${i+1}</span><span style="flex:1">${T(k)}</span></div>`).join('')}
+ <div class="sm mut">${ios?T('inst_ios_note'):T('inst_desk')}</div>`}
+ <button class="btn line block" data-act="pop">${T('gotit')}</button></div>`}};
+ACT.installnow=async()=>{const e=window.NC_IP;if(!e)return;try{e.prompt();const r=await e.userChoice;window.NC_IP=null;if(r&&r.outcome==='accepted')toast(T('inst_ok'));renderOv(true);renderTop()}catch(x){}};
 const b64u=s=>{const p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b);return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
 async function refreshPush(){try{if(!pushOk()){S.pushOn=false;return}const r=await navigator.serviceWorker.getRegistration('/');const s=r&&await r.pushManager.getSubscription();S.pushOn=!!s}catch(e){S.pushOn=false}}
 function pushCard(){
@@ -1231,4 +1260,4 @@ function openDeepLink(){
  }catch(e){sbErr(e);render()}
 })();
 
-['member','equip','equipitem','watch','clip','app','checkin','buddy','joinmem','reset'].forEach(k=>{delete V[k]});
+['member','equip','equipitem','watch','clip','checkin','buddy','joinmem','reset'].forEach(k=>{delete V[k]});
