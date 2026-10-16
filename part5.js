@@ -18,6 +18,7 @@ const aStatePill=m=>{
  if(m.state==='grace')return `<span class="pill red">Due · ${m.days_left} d</span>`;
  return '<span class="pill">Active</span>';
 };
+const bill=()=>!!(DB.cfg&&DB.cfg.billing_on);
 const aSw=(on,act,attrs,label)=>`<button class="tg ${on?'on':''}" role="switch" aria-checked="${!!on}" data-act="${act}" ${attrs||''} aria-label="${esc(label||'')}"><i></i></button>`;
 
 /* ---------- loading ---------- */
@@ -68,11 +69,11 @@ V.admin=function(){
  const s=ADM.sum||{};
  const c=(n,l)=>`<div class="card" style="text-align:center;padding:12px 8px"><div class="h2">${n===undefined?'–':n}</div><div class="xs mut">${l}</div></div>`;
  const r=(sec,l,sub,view,n)=>aRow('admgo',`data-sec="${sec}" ${view?`data-view="${view}"`:''}`,l,sub,n?`<span class="pill red">${n}</span>`:undefined);
- return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${c(s.businesses,'Businesses')}${c(s.in_grace,'Payment due')}${c(s.locked,'Locked')}</div>
+ return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${c(s.businesses,'Businesses')}${bill()?c(s.in_grace,'Payment due'):''}${c(s.locked,'Locked')}</div>
  ${r('support','Chat messages','Members writing to you through the chat bubble',0,ADM.supn)}
- ${r('due','Payments due','Reminders, mark paid, lock, spreadsheet download','adm_due',s.in_grace)}
+ ${bill()?r('due','Payments due','Reminders, mark paid, lock, spreadsheet download','adm_due',s.in_grace):''}
  ${r('joinreq','Applications','People asking to join (Apply to join)',0,ADM.jrn)}
- ${r('members','Members and payments','Search, mark paid, lock, suspend')}
+ ${r('members','Members','Search, lock, suspend')}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
  ${r('requests','"Other, please tell us" requests','New towns, areas and categories asked for',0,s.open_requests)}
@@ -84,8 +85,8 @@ V.admin=function(){
  ${r('clubs','Clubs','Add, rename, hide')}
  ${r('news','Community news','Post updates members see on the feed')}
  ${r('content','Latest content','Remove posts, listings, meetups')}
- ${r('payments','Payments log','Every recorded payment')}
- ${r('settings','Settings','Free months, grace days, fee, contact details')}
+ ${bill()?r('payments','Payments log','Every recorded payment'):''}
+ ${r('settings','Settings','Charging switch, contact email')}
  ${r('audit','Activity log','Who changed what')}</div>`};
 };
 ACT.adminhome=async()=>{try{await admLoad('home')}catch(e){return}push('admin',{sec:'home'})};
@@ -96,7 +97,7 @@ ACT.push=function(d){if(d.v==='admin'&&S.admin){return ACT.adminhome()}return pu
 /* ---------- members ---------- */
 V.adm_members=function(){
  const f=S.amf||'all';
- const chips=[['all','All'],['grace','Payment due'],['locked','Locked'],['suspended','Suspended'],['business','Businesses'],['admin','Admins']];
+ const chips=[['all','All'],...(bill()?[['grace','Payment due']]:[]),['locked','Locked'],['suspended','Suspended'],['business','Businesses'],['admin','Admins']];
  return {t:'Members',b:`<div class="stack"><input id="a-q" type="search" placeholder="Search name or email" value="${esc(S.amq||'')}" autocomplete="off"><div class="chips">${chips.map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="amf" data-id="${c[0]}">${c[1]}</button>`).join('')}</div><div id="a-list" class="stack">${memList()}</div></div>`};
 };
 function memList(){
@@ -118,14 +119,14 @@ V.adm_member=function(o){
  <div class="card stack"><div class="row"><div class="grow" style="min-width:0"><h2 class="h2">${esc(m.display_name||'(no name)')}</h2><div class="sm mut" style="overflow-wrap:anywhere">${esc(m.email)}</div></div>${aStatePill(m)}</div>
  <div class="sm">${m.account_type==='business'?'Business':'Member'}${place?' · '+esc(place):''}</div>
  <div class="sm mut">Joined ${aDate(m.joined_at)} · Free until ${aDate(m.free_until)}${m.paid_until?' · Paid until '+aDate(m.paid_until):''}</div>
- <div class="sm"><b>Next due: ${aDate(m.due_on)}</b>${m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
- <div class="card stack"><b>Record a payment</b><div class="grid2" style="gap:10px"><div><label class="f" for="a-amt">Amount (TL)</label><input id="a-amt" type="number" inputmode="decimal" value="${esc(fee)}"></div><div><label class="f" for="a-mo">Months</label><select id="a-mo">${[1,2,3,6,12].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div><label class="f" for="a-nt">Note (optional)</label><input id="a-nt" maxlength="120" placeholder="e.g. cash, 14 Oct">${aBtn('apay',`${ic('check','s')}Record payment and open account`,`data-id="${m.id}"`,'')}</div>
+ ${bill()?`<div class="sm"><b>Next due: ${aDate(m.due_on)}</b>`:'<div class="sm"><b>Free member</b>'}${bill()&&m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
+ ${bill()?`<div class="card stack"><b>Record a payment</b><div class="grid2" style="gap:10px"><div><label class="f" for="a-amt">Amount (TL)</label><input id="a-amt" type="number" inputmode="decimal" value="${esc(fee)}"></div><div><label class="f" for="a-mo">Months</label><select id="a-mo">${[1,2,3,6,12].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div><label class="f" for="a-nt">Note (optional)</label><input id="a-nt" maxlength="120" placeholder="e.g. cash, 14 Oct">${aBtn('apay',`${ic('check','s')}Record payment and open account`,`data-id="${m.id}"`,'')}</div>`:''}
  <div class="card stack"><b>Account control</b>
  <div class="row" style="flex-wrap:wrap">${aBtn('alock',m.manual_lock?'Remove manual lock':'Lock account now',`data-id="${m.id}" data-v="${m.manual_lock?0:1}"`)}${aBtn('asusp',m.suspended?'Reinstate':'Suspend',`data-id="${m.id}" data-v="${m.suspended?0:1}"`,m.suspended?'soft':'line')}</div>
  <div class="row" style="flex-wrap:wrap">${aBtn('aext','+30 free days',`data-id="${m.id}"`)}${aBtn('aadmin',m.role==='admin'?'Remove admin':'Make admin',`data-id="${m.id}" data-v="${m.role==='admin'?'member':'admin'}"`,'line')}</div>
  <label class="f" for="a-note">Private note</label><textarea id="a-note" maxlength="500" style="min-height:70px">${esc(m.admin_note||'')}</textarea>${aBtn('anote','Save note',`data-id="${m.id}"`)}
  ${aBtn('adel',S.adelc===m.id?'Tap again to delete for good':'Delete account and all content',`data-id="${m.id}"`,'line')}</div>
- <div class="card stack"><b>Payment history</b>${pay.length?pay.map(p=>`<div class="row"><span class="grow sm">${aDate(p.paid_on)} · ${p.months} month(s)${p.note?' · '+esc(p.note):''}</span><b>${p.amount_try!=null?Number(p.amount_try).toLocaleString(LOC[S.L])+' TL':'–'}</b></div>`).join(''):'<span class="mut sm">No payments yet.</span>'}</div></div>`};
+ ${bill()?`<div class="card stack"><b>Payment history</b>${pay.length?pay.map(p=>`<div class="row"><span class="grow sm">${aDate(p.paid_on)} · ${p.months} month(s)${p.note?' · '+esc(p.note):''}</span><b>${p.amount_try!=null?Number(p.amount_try).toLocaleString(LOC[S.L])+' TL':'–'}</b></div>`).join(''):'<span class="mut sm">No payments yet.</span>'}</div>`:''}</div></div>`};
 };
 ACT.apay=async d=>{
  const amt=parseFloat(val('a-amt')),mo=parseInt(val('a-mo'))||1;
@@ -225,12 +226,13 @@ ACT.ajrno=async d=>{await aok(sb.from('join_requests').update({status:'declined'
 /* ---------- settings ---------- */
 V.adm_settings=function(){
  const s=ADM.settings||{};
- return {t:'Settings',b:`<div class="stack"><div class="card stack">
+ return {t:'Settings',b:`<div class="stack"><div class="card"><div class="row"><div class="grow"><b>Charging members</b><div class="sm mut">${s.billing_on?'On: free months, due dates, reminders and the lock page are active.':'Off: membership is free and no fee shows anywhere. Policies say a fee may come in future.'}</div></div>${aSw(s.billing_on,'abilling','','Charging')}</div></div><div class="card stack"><div class="xs mut">Only used if charging is switched on</div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-fm">Free months</label><input id="s-fm" type="number" min="0" value="${s.free_months}"></div><div><label class="f" for="s-gd">Days to pay after due date</label><input id="s-gd" type="number" min="0" value="${s.grace_days}"></div></div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-ft">Monthly fee (TL)</label><input id="s-ft" type="number" min="0" inputmode="decimal" value="${s.monthly_fee_try??''}"></div><div><label class="f" for="s-fg">Monthly fee (GBP, optional)</label><input id="s-fg" type="number" min="0" step="0.01" inputmode="decimal" value="${s.monthly_fee_gbp??''}"></div></div>
  <label class="f" for="s-em">Contact email (shown on the lock page; add the professional address here later)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
  ${aBtn('asave',`${ic('check','s')}Save settings`,'','')}</div><p class="xs mut">Free months apply to people who sign up after you change them. Days to pay apply to everyone straight away.</p></div>`};
 };
+ACT.abilling=async()=>{const nb=!ADM.settings.billing_on;await aok(sb.from('app_settings').update({billing_on:nb,updated_at:new Date().toISOString()}).eq('id',1));aLog('billing',{on:nb});DB.cfg.billing_on=nb;toast('Saved');admReload()};
 ACT.asave=async()=>{
  const n=id=>{const v=val(id);return v===''?null:Number(v)};
  const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:null,contact_whatsapp:null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
