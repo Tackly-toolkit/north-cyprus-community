@@ -262,6 +262,7 @@ async function loadContent(){
  await loadInfo();
  await loadGuides();
  await loadExtras();
+ refreshPush();
  S.cl=1;
 }
 
@@ -1017,6 +1018,54 @@ V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T(
  ${u.guide_key&&gtOf(u.guide_key)?`<button class="btn soft block" data-act="push" data-v="guide" data-id="${esc(u.guide_key)}">${ic('book','s')}${T('up_guide')}</button>`:''}
  <div class="note g">${ic('info')}<div class="sm">${off?T('up_from_off'):T('up_from')}</div></div>${actBar('update',u.id,u.title,{})}</div>`}};
 
+
+/* ---------- phone alerts (web push) ---------- */
+N({
+ pu_t:["Phone alerts","Telefon bildirimleri","Powiadomienia na telefonie","Уведомления на телефоне"],
+ pu_d:["Get a short alert on this phone for replies, messages and friend requests. You can turn it off any time.","Yanıtlar, mesajlar ve arkadaşlık istekleri için bu telefonda kısa bildirim alın. İstediğiniz zaman kapatabilirsiniz.","Otrzymuj krótkie powiadomienia na tym telefonie o odpowiedziach, wiadomościach i zaproszeniach. Możesz je wyłączyć w każdej chwili.","Получайте короткие уведомления на этом телефоне об ответах, сообщениях и заявках в друзья. Их можно отключить в любой момент."],
+ pu_on:["Turn on alerts","Bildirimleri aç","Włącz powiadomienia","Включить уведомления"],
+ pu_off:["Turn off alerts","Bildirimleri kapat","Wyłącz powiadomienia","Выключить уведомления"],
+ pu_is:["Alerts are on for this phone.","Bu telefonda bildirimler açık.","Powiadomienia na tym telefonie są włączone.","Уведомления на этом телефоне включены."],
+ pu_ios:["On iPhone, first add this app to your Home Screen (Share, then Add to Home Screen), then open it from there and turn alerts on.","iPhone'da önce bu uygulamayı Ana Ekrana ekleyin (Paylaş, sonra Ana Ekrana Ekle), oradan açın ve bildirimleri açın.","Na iPhonie najpierw dodaj tę aplikację do ekranu głównego (Udostępnij, potem Dodaj do ekranu początkowego), otwórz ją stamtąd i włącz powiadomienia.","На iPhone сначала добавьте приложение на экран «Домой» (Поделиться, затем «На экран Домой»), откройте его оттуда и включите уведомления."],
+ pu_no:["This browser cannot show phone alerts.","Bu tarayıcı telefon bildirimlerini gösteremiyor.","Ta przeglądarka nie obsługuje powiadomień.","Этот браузер не поддерживает уведомления."],
+ pu_blocked:["Alerts are blocked for this site. Allow notifications in your browser settings, then try again.","Bu site için bildirimler engellendi. Tarayıcı ayarlarından bildirimlere izin verin ve tekrar deneyin.","Powiadomienia są zablokowane dla tej strony. Zezwól na nie w ustawieniach przeglądarki i spróbuj ponownie.","Уведомления для сайта заблокированы. Разрешите их в настройках браузера и повторите."]
+});
+const VAPID_PUB='BFuPJZW3P_9VnehJ5ryKIevdm6B_eWB_mLCSnbyMJbgAsOwJLTGGTrF7iKLNUXCi5s0c1cgLRaRNArvFrN6UN6k';
+const pushOk=()=>'serviceWorker' in navigator&&'PushManager' in window&&'Notification' in window;
+const isIos=()=>/iphone|ipad|ipod/i.test(navigator.userAgent);
+const isStandalone=()=>(window.matchMedia&&matchMedia('(display-mode: standalone)').matches)||navigator.standalone;
+const b64u=s=>{const p='='.repeat((4-s.length%4)%4),b=(s+p).replace(/-/g,'+').replace(/_/g,'/'),r=atob(b);return Uint8Array.from([...r].map(c=>c.charCodeAt(0)))};
+async function refreshPush(){try{if(!pushOk()){S.pushOn=false;return}const r=await navigator.serviceWorker.getRegistration('/');const s=r&&await r.pushManager.getSubscription();S.pushOn=!!s}catch(e){S.pushOn=false}}
+function pushCard(){
+ if(!S.uid)return '';
+ let inner;
+ if(!pushOk()||(isIos()&&!isStandalone()))inner=`<div class="sm mut">${isIos()&&!isStandalone()?T('pu_ios'):T('pu_no')}</div>`;
+ else if(S.pushOn)inner=`<div class="sm">${ic('check','s')} ${T('pu_is')}</div><button class="btn line" data-act="pushoff">${T('pu_off')}</button>`;
+ else inner=`<div class="sm mut">${T('pu_d')}</div><button class="btn" data-act="pushon">${ic('bell','s')}${T('pu_on')}</button>`;
+ return `<div class="card stack"><b>${T('pu_t')}</b>${inner}</div>`;
+}
+ACT.pushon=async()=>{
+ if(gate())return;
+ try{
+  const perm=await Notification.requestPermission();
+  if(perm!=='granted'){toast(T('pu_blocked'));return}
+  const reg=await navigator.serviceWorker.register('/sw.js');await navigator.serviceWorker.ready;
+  let sub=await reg.pushManager.getSubscription();
+  if(!sub)sub=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64u(VAPID_PUB)});
+  const j=sub.toJSON();
+  const {error}=await sb.from('push_subscriptions').upsert({user_id:S.uid,endpoint:j.endpoint,p256dh:j.keys.p256dh,auth:j.keys.auth},{onConflict:'endpoint'});
+  if(error)throw error;
+  S.pushOn=true;renderOv(true);toast(T('pu_is'));
+ }catch(e){toast(String(e.message||e).slice(0,120))}
+};
+ACT.pushoff=async()=>{
+ try{
+  const reg=await navigator.serviceWorker.getRegistration('/');const sub=reg&&await reg.pushManager.getSubscription();
+  if(sub){await sb.from('push_subscriptions').delete().eq('endpoint',sub.endpoint);await sub.unsubscribe()}
+  S.pushOn=false;renderOv(true);
+ }catch(e){toast(String(e.message||e).slice(0,120))}
+};
+(function(){const o=V.notifs;V.notifs=function(){const r=o();r.b=r.b.replace('<div class="stack">','<div class="stack">'+pushCard());return r}})();
 
 /* ---------- social feed: posts, marketplace, meetups and news in one stream ---------- */
 N({

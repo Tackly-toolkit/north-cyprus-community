@@ -1,0 +1,5 @@
+-- Applied live as 020a-020d. Phone alerts (web push), no outside account.
+-- push_subscriptions (own rows only), push_config (no policies: service role only; holds the sending keys),
+-- public.push_to() calls the send-push edge function with a shared secret,
+-- triggers: notifications (member), support_messages (admins <-> member), join_requests (admins).
+-- Keys are generated and kept in .private/vapid.json and push_config. Public key is also in part4.js (VAPID_PUB).
