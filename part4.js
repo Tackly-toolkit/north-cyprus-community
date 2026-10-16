@@ -401,7 +401,7 @@ V.signup=function(){
   ${biz?`<label class="f" for="su-b">${T('su_biz_name')}</label><input id="su-b" value="${esc(u.biz||'')}" maxlength="60">${catSel('su-b2','directory',{c:u.cat}).replace(/id="su-b2-c"/,'id="su-bc"').replace(/data-cat="su-b2"/,'data-cat="su-b2"')}<label class="f" for="su-ba">${T('su_addr')}</label><input id="su-ba" value="${esc(u.addr||'')}" maxlength="120">`:''}
   ${geoSel('sg',{d:u.d,t:u.t,a:u.a})}</div>
   <div class="card"><label class="f" for="su-e">${T('su_email')}</label><input id="su-e" type="email" inputmode="email" autocomplete="email" value="${esc(u.email||'')}"><label class="f" for="su-p">${T('pw')}</label><input id="su-p" type="password" autocomplete="new-password" value="${esc(u.pw||'')}">
-  ${DB.cfg.signup_mode==='invite'?`<label class="f" for="su-i">${T('su_invite')}</label><input id="su-i" value="${esc(u.inv||'')}" maxlength="40"><p class="xs mut" style="margin-top:6px">${T('su_invite_d')}</p>`:''}</div>
+  ${DB.cfg.signup_mode==='invite'?`<label class="f" for="su-i">${T('su_invite')}</label><input id="su-i" value="${esc(u.inv||'')}" maxlength="40"><p class="xs mut" style="margin-top:6px">${T('su_invite_d')}</p><button class="btn line block" style="margin-top:10px" data-act="applyopen">${T('ap_btn')}</button>`:''}</div>
   ${biz?`<button class="opt ${u.dir?'on':''}" data-act="sudir"><span class="lf">${ic(u.dir?'check':'plus')}</span><span style="flex:1"><b>${T('su_dir')}</b><div class="sm mut">${T('su_dir_d')}</div></span></button>`:''}
   <label class="row" style="gap:10px;align-items:flex-start"><input id="su-ag" type="checkbox" style="width:22px;height:22px;margin-top:2px" ${u.agree?'checked':''}><span class="sm">${T('su_agree')} <a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a> · <a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a> · <a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a></span></label>
   ${u.err?`<div class="note">${ic('info')}<div class="sm">${esc(u.err)}</div></div>`:''}
@@ -754,6 +754,28 @@ ACT.supsend=async()=>{
  const t=$('#sup-t');if(t)t.value='';await supLoad();const l=$('#sup-l');if(l)l.scrollTop=l.scrollHeight;toast(T('msg_sent'));
 };
 setInterval(()=>{if(S.uid&&S.prof&&!document.hidden)supLoad()},15000);
+
+/* ---------- apply to join (when sign-up is invitation only) ---------- */
+N({ap_btn:["No invite code? Apply to join","Davet kodunuz yok mu? Katılmak için başvurun","Brak kodu? Złóż wniosek o dołączenie","Нет кода? Подайте заявку"],
+ ap_t:["Apply to join","Katılmak için başvur","Poproś o dołączenie","Заявка на вступление"],
+ ap_d:["Tell us a little about yourself. We will reply by email with an invitation and how to get started.","Kendinizden kısaca bahsedin. Davet ve başlangıç bilgisiyle e-posta ile döneceğiz.","Napisz kilka słów o sobie. Odpiszemy e-mailem z zaproszeniem.","Расскажите немного о себе. Мы ответим по почте с приглашением."],
+ ap_name:["Your name","Adınız","Imię","Ваше имя"],ap_country:["Country you are from","Geldiğiniz ülke","Kraj","Страна"],
+ ap_how:["How did you hear about us?","Bizi nereden duydunuz?","Skąd o nas wiesz?","Как вы о нас узнали?"],
+ ap_msg:["Anything you would like to add (optional)","Eklemek istedikleriniz (isteğe bağlı)","Coś jeszcze (opcjonalnie)","Что-то добавить (необязательно)"],
+ ap_send:["Send application","Başvuruyu gönder","Wyślij","Отправить"],
+ ap_ok:["Thank you. We have your application and will be in touch by email.","Teşekkürler. Başvurunuz alındı, e-posta ile dönüş yapacağız.","Dziękujemy. Odezwiemy się e-mailem.","Спасибо! Мы свяжемся с вами по почте."],
+ ap_err:["Please add your name and a valid email.","Lütfen adınızı ve geçerli bir e-posta girin.","Podaj imię i poprawny e-mail.","Укажите имя и корректный e-mail."],
+ ap_dup:["We already have an application from this email. We will be in touch.","Bu e-posta ile zaten başvuru var. Dönüş yapacağız.","Mamy już zgłoszenie z tego adresu.","Заявка с этого адреса уже есть."]});
+SH.apply=s=>`<h2 class="h2">${T('ap_t')}</h2><p class="sm mut" style="margin-top:6px">${T('ap_d')}</p><div class="stack" style="margin-top:12px"><div><label class="f" for="ap-n">${T('ap_name')}</label><input id="ap-n" maxlength="60" autocomplete="name"><label class="f" for="ap-e">${T('su_email')}</label><input id="ap-e" type="email" inputmode="email" autocomplete="email" maxlength="120"><label class="f" for="ap-c">${T('ap_country')}</label><input id="ap-c" maxlength="60"><label class="f" for="ap-h">${T('ap_how')}</label><input id="ap-h" maxlength="120"><label class="f" for="ap-m">${T('ap_msg')}</label><textarea id="ap-m" maxlength="600"></textarea></div>${s.err?`<div class="note">${ic('info')}<div class="sm">${esc(s.err)}</div></div>`:''}<button class="btn block" data-act="applysend">${T('ap_send')}</button></div>`;
+ACT.applyopen=()=>{if(S.su)grabSu();openSheet({v:'apply'})};
+ACT.applysend=async()=>{
+ const n=val('ap-n'),e=val('ap-e');
+ if(n.length<2||!/^\S+@\S+\.\S+$/.test(e)){openSheet({v:'apply',err:T('ap_err')});return}
+ const row={name:n,email:e,country:val('ap-c')||null,how_heard:val('ap-h')||null,message:val('ap-m')||null};
+ const {error}=await sb.from('join_requests').insert(row);
+ if(error&&error.code!=='23505')return toast(error.message);
+ closeSheet();toast(error?T('ap_dup'):T('ap_ok'));
+};
 
 /* ---------- policies ---------- */
 function policyText(id){
