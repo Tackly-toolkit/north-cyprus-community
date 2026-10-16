@@ -78,7 +78,7 @@ V.admin=function(){
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
  ${r('requests','"Other, please tell us" requests','New towns, areas and categories asked for',0,s.open_requests)}
  ${r('invites','Sign-up and invites','Open or invitation only, invite codes')}
- ${r('banners','Banners','All off until you switch them on')}
+ ${r('banners','Banners','Pick the page for each banner. All off until you switch them on')}
  ${r('places','Places','Districts, towns, areas and alternative names','adm_places')}
  ${r('cats','Categories','Marketplace and directory categories','adm_cats')}
  ${r('lists','Dropdown lists','Condition, currency, handover','adm_lists')}
@@ -276,16 +276,17 @@ ACT.adiro=async d=>{await aok(sb.from('directory').update({offer:val('d-o-'+d.id
 ACT.adirdel=async d=>{await aok(sb.from('directory').delete().eq('id',d.id));aLog('directory_delete',{id:d.id});admReload();loadContent()};
 
 /* ---------- banners ---------- */
-const BZ=[['top','Top of every page'],['feed','Feed'],['explore','Explore'],['market','Marketplace'],['directory','Directory']];
+const BZ=[['top','Every page'],['feed','Feed'],['explore','Explore'],['market','Marketplace'],['directory','Directory'],['events','Events'],['me','Me tab']];
 V.adm_banners=function(){
  const bs=ADM.banners||[];
  return {t:'Banners',b:`<div class="stack"><div class="note g">${ic('info')}<div class="sm">Every banner starts switched off. Nothing shows to members until you switch one on.</div></div>
- ${bs.map(b=>`<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(b.headline||'(no headline)')}</b><div class="xs mut">${(BZ.find(z=>z[0]===b.zone)||[0,b.zone])[1]}${b.starts_on?' · from '+b.starts_on:''}${b.ends_on?' · to '+b.ends_on:''}${b.trade?' · '+esc(b.trade):''}</div></div>${aSw(b.enabled,'abtog',`data-id="${b.id}" data-v="${b.enabled?0:1}"`,'Show')}</div>${b.body?`<div class="sm mut">${esc(b.body)}</div>`:''}${aBtn('abdel',`${ic('trash','s')}Delete`,`data-id="${b.id}"`,'line')}</div>`).join('')}
- <div class="card stack"><b>New banner</b><label class="f" for="b-z">Where</label><select id="b-z">${BZ.map(z=>`<option value="${z[0]}">${z[1]}</option>`).join('')}</select>
+ ${bs.map(b=>`<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(b.headline||'(no headline)')}</b><div class="xs mut">${(BZ.find(z=>z[0]===b.zone)||[0,b.zone])[1]}${b.starts_on?' · from '+b.starts_on:''}${b.ends_on?' · to '+b.ends_on:''}${b.trade?' · '+esc(b.trade):''}</div></div>${aSw(b.enabled,'abtog',`data-id="${b.id}" data-v="${b.enabled?0:1}"`,'Show')}</div>${bannerCard(Object.assign({},b,{link_url:null}))}<label class="f" for="bz-${b.id}">Shows on</label><select id="bz-${b.id}" data-act="abzone" data-id="${b.id}">${BZ.map(z=>`<option value="${z[0]}" ${z[0]===b.zone?'selected':''}>${z[1]}</option>`).join('')}</select>${aBtn('abdel',`${ic('trash','s')}Delete`,`data-id="${b.id}"`,'line')}</div>`).join('')}
+ <div class="card stack"><b>New banner</b><label class="f" for="b-z">Shows on (one page, or every page)</label><select id="b-z">${BZ.map(z=>`<option value="${z[0]}">${z[1]}</option>`).join('')}</select>
  <label class="f" for="b-h">Headline</label><input id="b-h" maxlength="80"><label class="f" for="b-b">Text</label><input id="b-b" maxlength="160"><label class="f" for="b-l">Link (optional)</label><input id="b-l" type="url" placeholder="https://"><label class="f" for="b-tr">Business or trade (for your records)</label><input id="b-tr" maxlength="60">
  <div class="grid2" style="gap:10px"><div><label class="f" for="b-s">Starts</label><input id="b-s" type="date"></div><div><label class="f" for="b-e">Ends</label><input id="b-e" type="date"></div></div>
  <label class="f" for="b-i">Image (optional)</label><input id="b-i" type="file" accept="image/*">${aBtn('abnew',`${ic('plus','s')}Save banner (starts off)`,'','')}</div></div>`};
 };
+document.addEventListener('change',async e=>{const t=e.target;if(t&&t.dataset&&t.dataset.act==='abzone'){await aok(sb.from('banners').update({zone:t.value}).eq('id',t.dataset.id));aLog('banner_page',{id:t.dataset.id,zone:t.value});toast('Moved');admReload();loadContent()}});
 ACT.abtog=async d=>{await aok(sb.from('banners').update({enabled:d.v==='1'}).eq('id',d.id));aLog('banner',{id:d.id,on:d.v});admReload();loadContent()};
 ACT.abdel=async d=>{await aok(sb.from('banners').delete().eq('id',d.id));admReload();loadContent()};
 ACT.abnew=async()=>{
