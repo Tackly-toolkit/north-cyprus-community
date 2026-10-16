@@ -18,7 +18,7 @@ const aStatePill=m=>{
  if(m.state==='grace')return `<span class="pill red">Due · ${m.days_left} d</span>`;
  return '<span class="pill">Active</span>';
 };
-const bill=()=>!!(DB.cfg&&DB.cfg.billing_on);
+const bill=()=>true;const live=()=>!!(DB.cfg&&DB.cfg.billing_on);
 const aSw=(on,act,attrs,label)=>`<button class="tg ${on?'on':''}" role="switch" aria-checked="${!!on}" data-act="${act}" ${attrs||''} aria-label="${esc(label||'')}"><i></i></button>`;
 
 /* ---------- loading ---------- */
@@ -119,7 +119,7 @@ V.adm_member=function(o){
  <div class="card stack"><div class="row"><div class="grow" style="min-width:0"><h2 class="h2">${esc(m.display_name||'(no name)')}</h2><div class="sm mut" style="overflow-wrap:anywhere">${esc(m.email)}</div></div>${aStatePill(m)}</div>
  <div class="sm">${m.account_type==='business'?'Business':'Member'}${place?' · '+esc(place):''}</div>
  <div class="sm mut">Joined ${aDate(m.joined_at)} · Free until ${aDate(m.free_until)}${m.paid_until?' · Paid until '+aDate(m.paid_until):''}</div>
- ${bill()?`<div class="sm"><b>Next due: ${aDate(m.due_on)}</b>`:'<div class="sm"><b>Free member</b>'}${bill()&&m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
+ ${live()?`<div class="sm"><b>Next due: ${aDate(m.due_on)}</b>`:`<div class="sm"><b>Free member</b> · charging is off. If you switch it on, their next due date would be ${aDate(m.paid_until||m.free_until)}`}${live()&&m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
  ${bill()?`<div class="card stack"><b>Record a payment</b><div class="grid2" style="gap:10px"><div><label class="f" for="a-amt">Amount (TL)</label><input id="a-amt" type="number" inputmode="decimal" value="${esc(fee)}"></div><div><label class="f" for="a-mo">Months</label><select id="a-mo">${[1,2,3,6,12].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div><label class="f" for="a-nt">Note (optional)</label><input id="a-nt" maxlength="120" placeholder="e.g. cash, 14 Oct">${aBtn('apay',`${ic('check','s')}Record payment and open account`,`data-id="${m.id}"`,'')}</div>`:''}
  <div class="card stack"><b>Account control</b>
  <div class="row" style="flex-wrap:wrap">${aBtn('alock',m.manual_lock?'Remove manual lock':'Lock account now',`data-id="${m.id}" data-v="${m.manual_lock?0:1}"`)}${aBtn('asusp',m.suspended?'Reinstate':'Suspend',`data-id="${m.id}" data-v="${m.suspended?0:1}"`,m.suspended?'soft':'line')}</div>
@@ -178,7 +178,7 @@ function dueList(){
 }
 V.adm_due=function(){
  const ls=dueList(),fee=(DB.cfg&&DB.cfg.monthly_fee_try)||'';
- return {t:'Payments due',b:`<div class="stack"><div class="card stack"><div class="sm mut">Everyone whose payment is due in the next 14 days, in the 4-day grace period, or already locked. Soonest first.</div>${aBtn('acsv',`${ic('copy','s')}Download spreadsheet (all members)`,'','')}</div>
+ return {t:'Payments due',b:`<div class="stack">${live()?'':'<div class="note">'+ic('info')+'<div class="sm">Charging is off, so nobody is due and members see no fees. Switch it on under Settings when you are ready. Until then you can still record payments in advance and download the member spreadsheet.</div></div>'}<div class="card stack"><div class="sm mut">Everyone whose payment is due in the next 14 days, in the 4-day grace period, or already locked. Soonest first.</div>${aBtn('acsv',`${ic('copy','s')}Download spreadsheet (all members)`,'','')}</div>
  ${ls.length?ls.map(m=>{const k='p'+m.id;return `<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(m.display_name||'(no name)')}</b><div class="xs mut" style="overflow-wrap:anywhere">${esc(m.email)} · due ${aDate(m.due_on)}</div></div>${aStatePill(m)}</div>
  <div class="row" style="flex-wrap:wrap">${aBtn('aremind',`data-id="${m.id}"`,`${ic('msg','s')}Send reminder`)}${aBtn('apaynow',`data-id="${m.id}"`,S.apc===m.id?'Tap again: paid '+fee+' TL, 1 month':`${ic('check','s')}Mark paid`,S.apc===m.id?'':'line')}${m.state==='locked'||m.manual_lock?'':aBtn('alock',`data-id="${m.id}" data-v="1"`,'Lock now','line')}${aBtn('admgo',`data-sec="member" data-x="${m.id}"`,'Open','line')}</div></div>`}).join(''):'<div class="card" style="text-align:center"><p class="mut">Nobody is due yet.</p></div>'}</div>`};
 };
@@ -226,13 +226,21 @@ ACT.ajrno=async d=>{await aok(sb.from('join_requests').update({status:'declined'
 /* ---------- settings ---------- */
 V.adm_settings=function(){
  const s=ADM.settings||{};
- return {t:'Settings',b:`<div class="stack"><div class="card"><div class="row"><div class="grow"><b>Charging members</b><div class="sm mut">${s.billing_on?'On: free months, due dates, reminders and the lock page are active.':'Off: membership is free and no fee shows anywhere. Policies say a fee may come in future.'}</div></div>${aSw(s.billing_on,'abilling','','Charging')}</div></div><div class="card stack"><div class="xs mut">Only used if charging is switched on</div>
- <div class="grid2" style="gap:10px"><div><label class="f" for="s-fm">Free months</label><input id="s-fm" type="number" min="0" value="${s.free_months}"></div><div><label class="f" for="s-gd">Days to pay after due date</label><input id="s-gd" type="number" min="0" value="${s.grace_days}"></div></div>
+ return {t:'Settings',b:`<div class="stack"><div class="card"><div class="row"><div class="grow"><b>Charging members</b><div class="sm mut">${s.billing_on?'On: members see their due date and fee, get the 4-day countdown, and are locked if unpaid.':'Off: membership is free and no fee shows anywhere. Policies say a fee may come in future.'}</div></div>${aSw(s.billing_on,'abilling','','Charging')}</div>
+ ${s.billing_on?'':`<label class="f" for="s-lm" style="margin-top:12px">When you switch on: free months for every current member, counted from that day</label><input id="s-lm" type="number" min="0" value="${s.free_months??3}"><div class="xs mut" style="margin-top:6px">Set the fee below and save first. Switching on never locks anyone straight away. Members with longer free time keep it.</div>`}</div><div class="card stack"><b>Fees and timing</b><div class="xs mut">Members see the fee only once charging is on.</div>
+ <div class="grid2" style="gap:10px"><div><label class="f" for="s-fm">Free months for new sign-ups</label><input id="s-fm" type="number" min="0" value="${s.free_months}"></div><div><label class="f" for="s-gd">Days to pay after due date</label><input id="s-gd" type="number" min="0" value="${s.grace_days}"></div></div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-ft">Monthly fee (TL)</label><input id="s-ft" type="number" min="0" inputmode="decimal" value="${s.monthly_fee_try??''}"></div><div><label class="f" for="s-fg">Monthly fee (GBP, optional)</label><input id="s-fg" type="number" min="0" step="0.01" inputmode="decimal" value="${s.monthly_fee_gbp??''}"></div></div>
  <label class="f" for="s-em">Contact email (shown on the lock page; add the professional address here later)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
  ${aBtn('asave',`${ic('check','s')}Save settings`,'','')}</div><p class="xs mut">Free months apply to people who sign up after you change them. Days to pay apply to everyone straight away.</p></div>`};
 };
-ACT.abilling=async()=>{const nb=!ADM.settings.billing_on;await aok(sb.from('app_settings').update({billing_on:nb,updated_at:new Date().toISOString()}).eq('id',1));aLog('billing',{on:nb});DB.cfg.billing_on=nb;toast('Saved');admReload()};
+ACT.abilling=async()=>{const nb=!ADM.settings.billing_on;
+ if(nb){
+  const fee=Number(ADM.settings.monthly_fee_try||0)||Number(ADM.settings.monthly_fee_gbp||0);
+  if(!fee){toast('Set the monthly fee and save first');return}
+  const n=Math.max(0,parseInt(val('s-lm'))||0),d=new Date();d.setMonth(d.getMonth()+n);
+  await aok(sb.from('profiles').update({free_until:d.toISOString()}).neq('role','admin').lt('free_until',d.toISOString()));
+  aLog('billing_free_from_today',{months:n});
+ }await aok(sb.from('app_settings').update({billing_on:nb,updated_at:new Date().toISOString()}).eq('id',1));aLog('billing',{on:nb});DB.cfg.billing_on=nb;toast('Saved');admReload()};
 ACT.asave=async()=>{
  const n=id=>{const v=val(id);return v===''?null:Number(v)};
  const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:null,contact_whatsapp:null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
