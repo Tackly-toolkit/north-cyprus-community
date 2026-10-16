@@ -1,5 +1,6 @@
 self.addEventListener('install',e=>self.skipWaiting());
 self.addEventListener('activate',e=>e.waitUntil(self.clients.claim()));
+self.addEventListener('fetch',e=>{});
 self.addEventListener('push',e=>{
   let d={};try{d=e.data.json()}catch(_){}
   e.waitUntil(self.registration.showNotification(d.title||'North Cyprus Community',{body:d.body||'',icon:'/icon-192.png',badge:'/icon-192.png',data:{url:d.url||'/'}}));
