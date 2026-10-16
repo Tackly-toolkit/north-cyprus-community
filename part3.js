@@ -52,7 +52,7 @@ function renderTop(){
  $('#top').innerHTML=`<button class="logo" data-act="tab" data-id="feed" title="${SITE_NAME}"><span class="mark">${ic('island','l')}</span><span class="t">${SITE_SHORT}</span></button>
  <button class="ib" data-act="push" data-v="search" title="${T('search')}" aria-label="${T('search')}">${ic('search')}</button>
  <button class="ib" data-act="sheet" data-v="lang" title="${T('lang')}" aria-label="${T('lang')}">${ic('globe')}</button>
- <button class="ib" data-act="bell" title="${T('notifs')}" aria-label="${T('notifs')}">${ic('bell')}${isM()&&S.unread?`<span class="dot">${S.unread}</span>`:''}</button>
+ <button class="ib" data-act="bell" title="${T('notifs')}" aria-label="${T('notifs')}">${ic('bell')}${isM()&&S.nunread?`<span class="dot">${S.nunread}</span>`:''}</button>
  <button class="sosb" data-act="sheet" data-v="sos" aria-label="${T('sos')}">${ic('buoy','s')}${T('sos')}</button>`;
 }
 function renderNav(){
