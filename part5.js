@@ -36,6 +36,9 @@ async function admLoad(sec,x){
   ADM.reports=rows;ADM.prev=prev;await loadPeople(rows.map(r=>r.reporter));
  }
  if(sec==='directory'){ADM.dir=await aok(sb.from('directory').select('*').order('status',{ascending:false}).order('created_at',{ascending:false}))}
+ if(sec==='guides'){const g=await aok(sb.from('guide_texts').select('*'));ADM.gt={};g.forEach(x=>{ADM.gt[x.guide_key]=x})}
+ if(sec==='sources'){ADM.src=await aok(sb.from('official_sources').select('*').order('created_at'));ADM.rev=await aok(sb.from('update_review').select('*').order('created_at',{ascending:false}).limit(60))}
+ if(sec==='news'){ADM.gt=ADM.gt||{}}
  if(sec==='info'){ADM.info=await aok(sb.from('info_items').select('*').order('kind').order('category').order('title'))}
  if(sec==='banners'){ADM.banners=await aok(sb.from('banners').select('*').order('created_at',{ascending:false}))}
  if(sec==='requests'){ADM.req=await aok(sb.from('other_requests').select('*').order('status',{ascending:false}).order('created_at',{ascending:false}).limit(100));await loadPeople(ADM.req.map(r=>r.requested_by))}
@@ -85,6 +88,8 @@ V.admin=function(){
  ${r('cats','Categories','Marketplace and directory categories','adm_cats')}
  ${r('lists','Dropdown lists','Condition, currency, handover','adm_lists')}
  ${r('clubs','Clubs','Add, rename, hide')}
+ ${r('guides','Guides','Write guide text with the official source and date checked')}
+ ${r('sources','Official sources','Source list and updates to review')}
  ${r('news','Community news','Post updates members see on the feed')}
  ${r('content','Latest content','Remove posts, listings, meetups')}
  ${bill()?r('payments','Payments log','Every recorded payment'):''}
@@ -405,15 +410,68 @@ V.adm_audit=function(){
 
 /* ---------- community news ---------- */
 V.adm_news=function(){
- const ns=ADM.news||[];
- return {t:'Community news',b:`<div class="stack"><div class="card stack"><b>New update</b><label class="f" for="n-t">Title</label><input id="n-t" maxlength="120"><label class="f" for="n-b">Text</label><textarea id="n-b" maxlength="3000"></textarea><label class="f" for="n-i">Image (optional)</label><input id="n-i" type="file" accept="image/*">${aBtn('anewsadd',`${ic('check','s')}Publish`,'','')}</div>
- ${ns.map(n=>`<div class="card stack" style="${n.published?'':'opacity:.55'}"><b style="overflow-wrap:anywhere">${esc(n.title)}</b><div class="xs mut">${aDate(n.created_at)}</div><div class="row" style="flex-wrap:wrap">${aBtn('anewstog',`data-id="${n.id}" data-v="${n.published?0:1}"`,n.published?'Hide':'Show')}${aBtn('anewsdel',`data-id="${n.id}"`,ic('trash','s'),'line')}</div></div>`).join('')}</div>`};
+ const ns=ADM.news||[],pf=S.nprefill||{};
+ return {t:'Community news',b:`<div class="stack"><div class="card stack"><b>New update</b><label class="f" for="n-t">Title</label><input id="n-t" maxlength="120" value="${esc(pf.title||'')}"><label class="f" for="n-c">Category</label><select id="n-c"><option value="">None (community news)</option>${AUC.map(k=>`<option value="${k}">${T('uc_'+k)}</option>`).join('')}</select><label class="f" for="n-b">Text</label><textarea id="n-b" maxlength="3000"></textarea>
+ <label class="f" for="n-su">Official source link</label><input id="n-su" maxlength="300" value="${esc(pf.source_url||'')}"><label class="f" for="n-lr">Law or decision number</label><input id="n-lr" maxlength="200"><label class="f" for="n-co">Date you checked the source</label><input id="n-co" type="date" value="${today()}">
+ <label class="f" for="n-g">Related guide (optional)</label><select id="n-g"><option value="">None</option>${GC.map(g=>g.it.map((it,i)=>`<option value="${g.id}:${i}">${esc(g.n[0])}: ${esc(it[0])}</option>`).join('')).join('')}</select>
+ <label class="f" for="n-i">Image (optional)</label><input id="n-i" type="file" accept="image/*">${aBtn('anewsadd',`${ic('check','s')}Publish`,'','')}</div>
+ ${ns.map(n=>`<div class="card stack" style="${n.published?'':'opacity:.55'}"><b style="overflow-wrap:anywhere">${esc(n.title)}</b><div class="xs mut">${aDate(n.created_at)}${n.category?' · '+T('uc_'+n.category):''}</div><div class="row" style="flex-wrap:wrap">${aBtn('anewstog',`data-id="${n.id}" data-v="${n.published?0:1}"`,n.published?'Hide':'Show')}${aBtn('anewsdel',`data-id="${n.id}"`,ic('trash','s'),'line')}</div></div>`).join('')}</div>`};
 };
 ACT.anewsadd=async()=>{
  const t=val('n-t'),b=val('n-b');if(!t||!b)return toast('Add a title and text');
+ const cat=val('n-c')||null,su=val('n-su')||null,co=val('n-co')||null;
+ if(cat&&(!su||!co))return toast('Official updates need the source link and the date you checked');
  let img=null;const f=($('#n-i')||{}).files&&$('#n-i').files[0];
  if(f){const d=await readImg(f);if(d)img=await uploadDataUrl(d,'news')}
- await aok(sb.from('updates').insert({title:t,body:b,image_url:img}));aLog('news',{title:t});toast('Published');admReload();loadContent().then(()=>renderMain());
+ await aok(sb.from('updates').insert({title:t,body:b,image_url:img,category:cat,source_url:su,law_ref:val('n-lr')||null,checked_on:cat?co:null,guide_key:val('n-g')||null}));
+ if(S.nprefill&&S.nprefill.rid)await aok(sb.from('update_review').update({status:'done'}).eq('id',S.nprefill.rid));
+ S.nprefill=null;aLog('news',{title:t});toast('Published');admReload();loadContent().then(()=>renderMain());
 };
 ACT.anewstog=async d=>{await aok(sb.from('updates').update({published:d.v==='1'}).eq('id',d.id));admReload();loadContent()};
 ACT.anewsdel=async d=>{await aok(sb.from('updates').delete().eq('id',d.id));admReload();loadContent()};
+
+/* ---------- stage 4: guides, sources and updates to review ---------- */
+const AUC=['residency','property','visas','driving','health','tax','other'];
+V.adm_guides=function(){
+ const gt=ADM.gt||{},k=S.agk;
+ if(k){
+  const [c,i]=k.split(':'),g=GC.find(x=>x.id===c),t=gt[k]||{};
+  return {t:'Guide text',b:`<div class="stack"><button class="btn soft" data-act="agk" data-id="">${ic('left','s')}All guides</button><div class="card stack"><b>${esc(g.n[0])}: ${esc(g.it[+i][0])}</b>
+  <div class="note g">${ic('info')}<div class="sm">Write only what you have read on the official page. Keep a blank line between paragraphs. A short line on its own above a paragraph becomes a heading. Members see nothing until you press Publish.</div></div>
+  <label class="f" for="g-b">Text (English)</label><textarea id="g-b" maxlength="12000" style="min-height:260px">${esc(t.body||'')}</textarea>
+  <label class="f" for="g-sn">Source name</label><input id="g-sn" maxlength="160" value="${esc(t.source_name||'')}">
+  <label class="f" for="g-su">Source link (official page)</label><input id="g-su" maxlength="300" value="${esc(t.source_url||'')}">
+  <label class="f" for="g-lr">Law or decision number</label><input id="g-lr" maxlength="200" value="${esc(t.law_ref||'')}">
+  <label class="f" for="g-co">Date you checked the source</label><input id="g-co" type="date" value="${esc(t.checked_on||'')}">
+  <div class="row" style="flex-wrap:wrap">${aBtn('agsave',`data-k="${k}" data-p="1"`,'Publish','')}${aBtn('agsave',`data-k="${k}" data-p="0"`,t.published?'Hide (keep as draft)':'Save as draft','line')}${t.body?aBtn('agdel',`data-k="${k}"`,ic('trash','s'),'line'):''}</div></div></div>`};
+ }
+ return {t:'Guides',b:`<div class="stack"><div class="note g">${ic('info')}<div class="sm">Members only see a guide once you have written it and pressed Publish. Guides with no text stay hidden.</div></div>
+ ${GC.map(g=>`<div class="card stack"><b>${esc(g.n[0])}</b>${g.it.map((it,i)=>{const key=g.id+':'+i,t=gt[key];const st=t?(t.published?'<span class="pill">Published</span>':'<span class="pill red">Draft</span>'):'<span class="xs mut">No text</span>';return aRow('agk',`data-id="${key}"`,esc(it[0]),t&&t.checked_on?'Checked '+t.checked_on:'',st)}).join('')}</div>`).join('')}</div>`};
+};
+ACT.agk=d=>{S.agk=d.id||null;renderOv(true)};
+ACT.agsave=async d=>{
+ const body=val('g-b');if(!body||body.length<20)return toast('Write the guide text first');
+ const row={guide_key:d.k,body,source_name:val('g-sn')||null,source_url:val('g-su')||null,law_ref:val('g-lr')||null,checked_on:val('g-co')||null,published:d.p==='1',updated_at:new Date().toISOString()};
+ if(row.published&&(!row.source_url||!row.checked_on))return toast('Add the source link and the date you checked before publishing');
+ await aok(sb.from('guide_texts').upsert(row));aLog('guide_save',{k:d.k,p:row.published});toast(row.published?'Published':'Saved as draft');await admReload();loadGuides()
+};
+ACT.agdel=async d=>{await aok(sb.from('guide_texts').delete().eq('guide_key',d.k));aLog('guide_del',{k:d.k});S.agk=null;await admReload();loadGuides()};
+
+V.adm_sources=function(){
+ const ss=ADM.src||[],rv=ADM.rev||[],pend=rv.filter(x=>x.status==='pending');
+ const rb={yes:'<span class="pill">Can be read</span>',no:'<span class="pill red">A person must read it</span>',unknown:'<span class="pill">Not tested</span>'};
+ return {t:'Official sources',b:`<div class="stack">
+ <div class="card stack"><b>Updates to review (${pend.length})</b><div class="sm mut">Add a tip-off here when you or Chris see a change, including a headline from TFR or a page that cannot be read automatically. Open the official page, read the full text, then turn it into an update. Nothing reaches members until you publish it.</div>
+ <label class="f" for="r-t">What changed</label><input id="r-t" maxlength="200"><label class="f" for="r-u">Official page link</label><input id="r-u" maxlength="300"><label class="f" for="r-n">Note (optional)</label><input id="r-n" maxlength="300">${aBtn('arevadd',`${ic('plus','s')}Add to review list`,'','')}
+ ${pend.map(x=>`<div class="card stack"><b style="overflow-wrap:anywhere">${esc(x.title)}</b><div class="xs mut" style="overflow-wrap:anywhere">${aDate(x.created_at)}${x.note?' · '+esc(x.note):''}</div><div class="row" style="flex-wrap:wrap">${x.url?`<a class="btn soft" href="${esc(x.url)}" target="_blank" rel="noopener nofollow">Open page</a>`:''}${aBtn('arevup',`data-id="${x.id}"`,'Write update','')}${aBtn('arevno',`data-id="${x.id}"`,'Dismiss','line')}</div></div>`).join('')}</div>
+ <div class="card stack"><b>Add an official source</b><label class="f" for="o-n">Name</label><input id="o-n" maxlength="160"><label class="f" for="o-u">Link</label><input id="o-u" maxlength="300"><label class="f" for="o-b">Body (ministry or department)</label><input id="o-b">${aBtn('asrcadd',`${ic('plus','s')}Add`,'','')}</div>
+ ${ss.map(s=>`<div class="card stack" style="${s.active?'':'opacity:.55'}"><b style="overflow-wrap:anywhere">${esc(s.name)}</b><div class="xs mut" style="overflow-wrap:anywhere">${esc(s.body||'')}${s.last_checked?' · checked '+esc(s.last_checked):' · not checked yet'}</div><div>${rb[s.readable]||''}</div>${s.note?`<div class="sm mut">${esc(s.note)}</div>`:''}<div class="row" style="flex-wrap:wrap"><a class="btn soft" href="${esc(s.url)}" target="_blank" rel="noopener nofollow">Open</a>${aBtn('asrcchk',`data-id="${s.id}"`,'I checked it today','line')}${aBtn('asrctog',`data-id="${s.id}" data-v="${s.active?0:1}"`,s.active?'Hide':'Show','line')}${aBtn('asrcdel',`data-id="${s.id}"`,ic('trash','s'),'line')}</div></div>`).join('')}</div>`};
+};
+const today=()=>new Date().toISOString().slice(0,10);
+ACT.arevadd=async()=>{const t=val('r-t');if(!t||t.length<2)return toast('Say what changed');await aok(sb.from('update_review').insert({title:t,url:val('r-u')||null,note:val('r-n')||null}));toast('Added');admReload()};
+ACT.arevno=async d=>{await aok(sb.from('update_review').update({status:'dismissed'}).eq('id',d.id));admReload()};
+ACT.arevup=async d=>{const x=(ADM.rev||[]).find(r=>r.id===d.id);S.nprefill={title:x.title,source_url:x.url||'',rid:x.id};admGo('news')};
+ACT.asrcadd=async()=>{const n=val('o-n'),u=val('o-u');if(!n||!u)return toast('Add a name and a link');await aok(sb.from('official_sources').insert({name:n,url:u,body:val('o-b')||null}));toast('Added');admReload()};
+ACT.asrcchk=async d=>{await aok(sb.from('official_sources').update({last_checked:today()}).eq('id',d.id));admReload()};
+ACT.asrctog=async d=>{await aok(sb.from('official_sources').update({active:d.v==='1'}).eq('id',d.id));admReload()};
+ACT.asrcdel=async d=>{await aok(sb.from('official_sources').delete().eq('id',d.id));admReload()};

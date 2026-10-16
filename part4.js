@@ -260,6 +260,7 @@ async function loadContent(){
  (cq.data||[]).forEach(x=>{S.joined[x.club_id]=true});
  (nq.data||[]).forEach(x=>{DB.clubCount[x.club_id]=Number(x.n)});
  await loadInfo();
+ await loadGuides();
  await loadExtras();
  S.cl=1;
 }
@@ -464,7 +465,7 @@ ACT.cmtsend=async d=>{
 
 /* ---------- explore (no TFR-specific modules) ---------- */
 function exploreV(){
- const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺'],['northmap','map',T('m_map'),'']].concat(infoOf('place').length?[['places','pin',T('m_places'),infoOf('place').length+'']]:[],infoOf('contact').length?[['contacts','phone',T('m_contacts'),infoOf('contact').length+'']]:[]);
+ const mods=(gtN()?[['guides','book',T('m_guides'),F('cnt_guides',{n:gtN()})]]:[]).concat([['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺'],['northmap','map',T('m_map'),'']].concat(infoOf('place').length?[['places','pin',T('m_places'),infoOf('place').length+'']]:[],infoOf('contact').length?[['contacts','phone',T('m_contacts'),infoOf('contact').length+'']]:[]));
  return `<div class="stack">${notes()}<div class="hero"><h1 class="h1" style="max-width:85%">${T('tagline')}</h1><p style="margin-top:8px;max-width:85%" class="mut">${T('exp_hero_d')}</p></div>${bannerHtml('explore')}${featuredSpot()}
  <div class="grid2">${mods.map(m=>`<button class="mod" data-act="push" data-v="${m[0]}"><span class="lf">${ic(m[1])}</span><b>${m[2]}</b><small>${m[3]}</small></button>`).join('')}</div>
  ${appCard()}${footerV()}</div>`;
@@ -781,8 +782,6 @@ function favCard(){
 }
 
 /* ---------- community news ---------- */
-V.updates=function(){return {t:T('m_updates'),b:`<div class="stack">${(S.upd||[]).length?S.upd.map(u=>rowt('push','update',u.id,u.image_url?`<span class="th"><img class="art" src="${esc(u.image_url)}" alt=""></span>`:thmRaw('group',hueOf(u.id)),esc(u.title),ymd(u.created_at))).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_yet')}</p></div>`}</div>`}};
-V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T('m_updates'),b:''};return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span><h1 class="h1">${esc(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(u.body)}</p><div class="note g">${ic('info')}<div class="sm">${T('up_from')}</div></div>${actBar('update',u.id,u.title,{})}</div>`}};
 
 /* ---------- reports ---------- */
 ACT.repsend=async()=>{
@@ -794,7 +793,7 @@ ACT.repsend=async()=>{
 /* ---------- search over live data ---------- */
 function index(){
  const j=a=>Array.isArray(a)?a.join(' '):String(a),r=[];
- GC.forEach(g=>g.it.forEach((it,i)=>r.push({l:A(it),s:A(g.n),ic:g.ic,v:'guide',id:g.id+':'+i,h:j(it)})));
+ GC.forEach(g=>g.it.forEach((it,i)=>{if(gtOf(g.id+':'+i))r.push({l:A(it),s:A(g.n),ic:g.ic,v:'guide',id:g.id+':'+i,h:j(it)})}));
  S.dir.filter(b=>b.status==='approved').forEach(b=>r.push({l:b.n,s:b.catName+' · '+b.area,ic:'pin',v:'dir',id:b.id,h:b.n+' '+b.area+' '+b.catName}));
  S.meetups.forEach(e=>r.push({l:e.t,s:T('m_events'),ic:'cal',v:'event',id:e.id,h:e.t+' '+e.where}));
  DB.clubs.forEach(c=>r.push({l:c.name,s:T('m_clubs'),ic:c.icon||'users',v:'club',id:c.id,h:c.name+' '+(c.blurb||'')}));
@@ -969,6 +968,54 @@ ACT.policy=d=>{S.stack[S.stack.length-1]={v:'policy',id:d.id};renderOv(false)};
 
 /* ---------- guides & updates: attribution and untouched content ---------- */
 const GM_SAFE=id=>MV[id]?MV[id]:['tag',hueOf(id)];
+
+/* ---------- stage 4: written guides and the updates feed ---------- */
+N({
+ gt_src:["Official source","Resmi kaynak","Źródło urzędowe","Официальный источник"],
+ gt_chk:["Last checked {d}","Son kontrol: {d}","Ostatnio sprawdzono: {d}","Проверено: {d}"],
+ gt_law:["Legal basis","Yasal dayanak","Podstawa prawna","Правовая основа"],
+ gt_note:["Written from official pages. Rules change, so always confirm on the official page before you act. This is not legal advice.","Resmi sayfalardan yazılmıştır. Kurallar değişir; işlem yapmadan önce resmi sayfadan doğrulayın. Hukuki tavsiye değildir.","Opracowano na podstawie stron urzędowych. Przepisy się zmieniają, więc przed działaniem sprawdź stronę urzędową. To nie jest porada prawna.","Составлено по официальным страницам. Правила меняются, поэтому перед действиями проверьте официальную страницу. Это не юридическая консультация."],
+ gt_en:["Written in English. Translations will follow.","İngilizce yazılmıştır. Çeviriler yakında.","Napisano po angielsku. Tłumaczenia wkrótce.","Написано на английском. Переводы будут позже."],
+ gt_ask:["Ask the team","Ekibe sorun","Zapytaj zespół","Спросить команду"],
+ up_guide:["Read the guide","Rehberi okuyun","Przeczytaj poradnik","Открыть гид"],
+ up_cat_all:["All","Tümü","Wszystkie","Все"],
+ uc_residency:["Residency","Oturum","Pobyt","Резидентство"],uc_property:["Property","Mülk","Nieruchomości","Недвижимость"],uc_visas:["Visas","Vizeler","Wizy","Визы"],uc_driving:["Driving and vehicles","Sürücülük ve araçlar","Prowadzenie i pojazdy","Вождение и транспорт"],uc_health:["Health","Sağlık","Zdrowie","Здоровье"],uc_tax:["Tax and money","Vergi ve para","Podatki i pieniądze","Налоги и деньги"],uc_other:["Other","Diğer","Inne","Другое"],uc_community:["Community","Topluluk","Społeczność","Сообщество"],
+ up_from_off:["From the community team, based on official sources","Resmi kaynaklara dayanan topluluk ekibinden","Od zespołu społeczności, na podstawie źródeł urzędowych","От команды сообщества, на основе официальных источников"]
+});
+const UCATS=['residency','property','visas','driving','health','tax','other'];
+async function loadGuides(){const r=await sb.from('guide_texts').select('*').eq('published',true);DB.gt={};(r.data||[]).forEach(x=>{DB.gt[x.guide_key]=x})}
+const gtOf=k=>(DB.gt||{})[k];
+const gtN=()=>Object.keys(DB.gt||{}).length;
+const gcVis=()=>GC.map(g=>({g,ix:g.it.map((_,i)=>i).filter(i=>gtOf(g.id+':'+i))})).filter(x=>x.ix.length);
+function gtBody(t){
+ return String(t||'').split(/\n\s*\n/).map(b=>{const ls=b.split('\n').map(s=>s.trim()).filter(Boolean);if(!ls.length)return '';
+  const head=ls.length>1&&ls[0].length<=70&&!/[.:;!?]$/.test(ls[0]);
+  return (head?`<h2 class="h3" style="margin-top:6px">${esc(ls[0])}</h2>`:'')+`<p style="overflow-wrap:anywhere;white-space:pre-wrap">${esc((head?ls.slice(1):ls).join('\n'))}</p>`}).join('');
+}
+const srcLine=(o)=>[o.checked_on?F('gt_chk',{d:ymd(o.checked_on)}):'',o.source_url?`<a href="${esc(o.source_url)}" target="_blank" rel="noopener nofollow">${T('gt_src')}${o.source_name?': '+esc(o.source_name):''}</a>`:''].filter(Boolean).join(' · ');
+V.guides=function(){const v=gcVis();return {t:T('m_guides'),b:`<p class="mut" style="margin-bottom:12px">${T('guides_sub')}</p><div class="grid2">${v.map(({g,ix})=>`<button class="mod" data-act="push" data-v="gcat" data-id="${g.id}"><span class="mp">${thmArt(g.id)}</span><b>${A(g.n)}</b><small>${F('gcount',{n:ix.length})}</small></button>`).join('')}</div>`}};
+V.gcat=function(o){const g=GC.find(x=>x.id===o.id),m=GM[g.id],ix=g.it.map((_,i)=>i).filter(i=>gtOf(g.id+':'+i));return {t:A(g.n),b:`<div class="stack">${gal(m,MV[m][0],MV[m][1],'')}<p class="mut">${F('gcount',{n:ix.length})}</p>${ix.map(i=>rowt('push','guide',g.id+':'+i,thmRaw(MV[m][0],(MV[m][1]+i*25)%360),A(g.it[i]),'',S.saved[g.id+':'+i]?ic('star','s'):undefined)).join('')}</div>`}};
+V.guide=function(o){
+ const [c,i]=o.id.split(':');const g=GC.find(x=>x.id===c),t=gtOf(o.id);if(!g||!t)return {t:T('m_guides'),b:`<div class="card" style="text-align:center"><p class="mut">${T('none_yet')}</p></div>`};
+ const name=A(g.it[+i]),sv=!!S.saved[o.id];
+ return {t:A(g.n),b:`<div class="stack"><div><span class="pill">${ic(g.ic,'s')}${A(g.n)}</span><h1 class="h1" style="margin-top:10px">${name}</h1><p class="xs mut" style="margin-top:6px">${srcLine(t)}</p></div>
+ <div class="card stack">${gtBody(t.body)}</div>
+ ${t.law_ref?`<div class="card"><b>${T('gt_law')}</b><p class="sm mut" style="margin-top:4px;overflow-wrap:anywhere">${esc(t.law_ref)}</p></div>`:''}
+ <div class="row"><button class="btn grow" data-act="push" data-v="policy" data-id="contact">${ic('msg','s')}${T('gt_ask')}</button><button class="btn soft" data-act="save" data-id="${o.id}">${ic('star','s')}${sv?T('g_saved'):T('g_save')}</button></div>
+ <div class="note g">${ic('info')}<div class="sm">${T('gt_note')}${S.L!=='en'?' '+T('gt_en'):''}</div></div>
+ ${g.it.some((_,j)=>j!==+i&&gtOf(c+':'+j))?`<div><h2 class="h3" style="margin-bottom:10px">${T('related')}</h2><div class="stack">${g.it.map((it,j)=>j===+i||!gtOf(c+':'+j)?'':row('push','guide',c+':'+j,g.ic,A(it))).join('')}</div></div>`:''}</div>`}};
+const catPill=u=>u.category&&T('uc_'+u.category)?`<span class="pill">${T('uc_'+u.category)}</span>`:'';
+V.updates=function(){
+ const all=S.upd||[],f=S.ucat||'all',list=f==='all'?all:all.filter(u=>(u.category||'other')===f),used=UCATS.filter(c=>all.some(u=>u.category===c));
+ return {t:T('m_updates'),b:`<div class="stack">${used.length?`<div class="row" style="flex-wrap:wrap;gap:8px"><button class="chip ${f==='all'?'on':''}" data-act="ucat" data-id="all">${T('up_cat_all')}</button>${used.map(c=>`<button class="chip ${f===c?'on':''}" data-act="ucat" data-id="${c}">${T('uc_'+c)}</button>`).join('')}</div>`:''}
+ ${list.length?list.map(u=>rowt('push','update',u.id,u.image_url?`<span class="th"><img class="art" src="${esc(u.image_url)}" alt=""></span>`:thmRaw('group',hueOf(u.id)),esc(u.title),(u.category?T('uc_'+u.category)+' · ':'')+ymd(u.created_at))).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_yet')}</p></div>`}</div>`}};
+ACT.ucat=d=>{S.ucat=d.id;renderOv(true)};
+V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T('m_updates'),b:''};
+ const off=u.source_url||u.law_ref;
+ return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<div class="row" style="flex-wrap:wrap;gap:8px">${catPill(u)}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span></div><h1 class="h1">${esc(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(u.body)}</p>
+ ${off?`<div class="card stack">${u.law_ref?`<b>${T('gt_law')}</b><div class="sm" style="overflow-wrap:anywhere">${esc(u.law_ref)}</div>`:''}<div class="xs mut">${srcLine(u)}</div></div>`:''}
+ ${u.guide_key&&gtOf(u.guide_key)?`<button class="btn soft block" data-act="push" data-v="guide" data-id="${esc(u.guide_key)}">${ic('book','s')}${T('up_guide')}</button>`:''}
+ <div class="note g">${ic('info')}<div class="sm">${off?T('up_from_off'):T('up_from')}</div></div>${actBar('update',u.id,u.title,{})}</div>`}};
 
 
 /* ---------- social feed: posts, marketplace, meetups and news in one stream ---------- */
