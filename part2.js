@@ -108,7 +108,7 @@ const GC=[
 ["Driving licence","Ehliyet","Prawo jazdy","Водительские права"],
 ["Car import guide","Araç ithalat rehberi","Przewodnik importu auta","Руководство по ввозу автомобиля"]]},
 {id:'residency',ic:'file',n:["Residency","Oturum","Pobyt","Резидентство"],it:[
-["Residency presentation","Oturum sunumu","Prezentacja o pobycie","Презентация о резидентстве"],
+["Family and student permits","Aile ve öğrenci izinleri","Zezwolenia rodzinne i studenckie","Семейные и студенческие разрешения"],
 ["New residency procedure for over-60s","60 yaş üstü için yeni oturum prosedürü","Nowa procedura pobytowa dla osób 60+","Новая процедура резидентства для лиц старше 60 лет"],
 ["Residence permit documents & requirements","Oturum izni belgeleri ve şartları","Dokumenty i wymagania dla zezwolenia na pobyt","Документы и требования для вида на жительство"],
 ["Property rules","Mülk kuralları","Zasady dotyczące nieruchomości","Правила в отношении недвижимости"],
