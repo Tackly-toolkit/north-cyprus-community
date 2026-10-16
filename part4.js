@@ -217,7 +217,7 @@ function mapListing(r){
   who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,per:r.period,beds:r.bedrooms,furn:r.furnished,intent:r.intent||'offer',ptype:r.property_type,baths:r.bathrooms,prop:/^market-(rent|sale)/.test(r.category_id||''),imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,at:r.created_at,status:r.status,ic:'tag'};
 }
 function mapDir(r){
- return {id:r.id,n:r.name,cat:r.category_id,catName:cName(r.category_id),area:areaLabel(r.district_id,r.town_id,r.area_id),district:r.district_id,addr:r.address||'',off:r.offer||'',ver:r.verified?1:0,status:r.status,who:whoKey(r.owner),img:r.photo_url||'',k:r.name};
+ return {id:r.id,n:r.name,cat:r.category_id,catName:cName(r.category_id),area:areaLabel(r.district_id,r.town_id,r.area_id),district:r.district_id,addr:r.address||'',off:r.offer||'',ver:r.verified?1:0,status:r.status,who:whoKey(r.owner),img:r.photo_url||'',k:r.name,phone:r.phone||'',wa:r.whatsapp||'',web:r.website||'',hours:r.opening_hours||'',feat:!!r.featured,town:r.town_id};
 }
 function nextOcc(iso,rp){
  if(!rp||rp==='none')return iso;
@@ -463,11 +463,53 @@ ACT.cmtsend=async d=>{
 
 /* ---------- explore (no TFR-specific modules) ---------- */
 function exploreV(){
- const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓']];
- return `<div class="stack">${notes()}<div class="hero"><h1 class="h1" style="max-width:85%">${T('tagline')}</h1><p style="margin-top:8px;max-width:85%" class="mut">${T('exp_hero_d')}</p></div>${bannerHtml('explore')}
+ const mods=[['guides','book',T('m_guides'),F('cnt_guides',{n:GC.length})],['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺']];
+ return `<div class="stack">${notes()}<div class="hero"><h1 class="h1" style="max-width:85%">${T('tagline')}</h1><p style="margin-top:8px;max-width:85%" class="mut">${T('exp_hero_d')}</p></div>${bannerHtml('explore')}${featuredSpot()}
  <div class="grid2">${mods.map(m=>`<button class="mod" data-act="push" data-v="${m[0]}"><span class="lf">${ic(m[1])}</span><b>${m[2]}</b><small>${m[3]}</small></button>`).join('')}</div>
  ${appCard()}${footerV()}</div>`;
 }
+N({discounts:["Discounts","İndirimler","Zniżki","Скидки"],featured:["Featured","Öne çıkan","Wyróżnione","Рекомендуем"],all_towns:["All towns","Tüm kasabalar","Wszystkie miasta","Все города"],
+ m_convert:["Pound to lira","Sterlin–Lira","Funt na liry","Фунт в лиры"],cv_gbp:["Pounds (£)","Sterlin (£)","Funty (£)","Фунты (£)"],cv_try:["Lira (₺)","Lira (₺)","Liry (₺)","Лиры (₺)"],
+ cv_rate:["Rate used: £1 = ₺{r}. Set by our team on {d}. Banks and exchange offices give their own rate, so check before you change money.","Kullanılan kur: £1 = ₺{r}. Ekibimiz {d} tarihinde belirledi. Banka ve döviz büroları kendi kurunu uygular, bozdurmadan önce kontrol edin.","Kurs: £1 = ₺{r}. Ustawiony przez zespół {d}. Banki i kantory mają własne kursy, sprawdź przed wymianą.","Курс: £1 = ₺{r}. Установлен командой {d}. У банков и обменников свой курс, проверьте перед обменом."],
+ cv_none:["The rate has not been set yet. Check back soon.","Kur henüz belirlenmedi. Yakında tekrar bakın.","Kurs nie został jeszcze ustawiony.","Курс ещё не задан."],
+ biz_hours:["Opening times","Çalışma saatleri","Godziny otwarcia","Часы работы"],biz_web:["Website","Web sitesi","Strona","Сайт"],biz_call:["Call","Ara","Zadzwoń","Позвонить"],biz_edit:["Edit business details","İşletme bilgilerini düzenle","Edytuj dane firmy","Изменить данные"],
+ biz_phone:["Phone (with country code)","Telefon (ülke koduyla)","Telefon (z numerem kierunkowym)","Телефон (с кодом страны)"],biz_wa:["WhatsApp (with country code)","WhatsApp (ülke koduyla)","WhatsApp (z numerem kierunkowym)","WhatsApp (с кодом страны)"],
+ biz_hours_ph:["e.g. Mon–Sat 09:00–18:00, Sun closed","örn. Pzt–Cmt 09:00–18:00, Pazar kapalı","np. pon–sob 9:00–18:00, niedz. zamknięte","напр. пн–сб 9:00–18:00, вс выходной"],biz_saved:["Saved","Kaydedildi","Zapisano","Сохранено"]});
+const digits=x=>String(x||'').replace(/[^\d]/g,'');
+function bizContact(b){
+ const rows=[];
+ if(b.hours)rows.push(`<div class="row">${ic('clock')}<div class="grow"><div class="xs mut">${T('biz_hours')}</div><b style="overflow-wrap:anywhere;white-space:pre-wrap">${esc(b.hours)}</b></div></div>`);
+ if(b.web){const u=/^https?:\/\//i.test(b.web)?b.web:'https://'+b.web;rows.push(`<div class="row">${ic('globe')}<div class="grow" style="min-width:0"><div class="xs mut">${T('biz_web')}</div><b style="overflow-wrap:anywhere">${esc(b.web)}</b></div><a class="btn soft" href="${esc(u)}" target="_blank" rel="noopener nofollow">${T('open')}</a></div>`)}
+ const btns=[];
+ if(b.phone&&digits(b.phone))btns.push(`<a class="btn grow" href="tel:+${digits(b.phone)}">${ic('phone','s')}${T('biz_call')}</a>`);
+ if(b.wa&&digits(b.wa))btns.push(`<a class="btn soft grow" href="https://wa.me/${digits(b.wa)}" target="_blank" rel="noopener">${ic('wa','s')}${T('whatsapp')}</a>`);
+ if(btns.length)rows.push(`<div class="row">${btns.join('')}</div>`);
+ if(b.who==='me')rows.push(`<button class="btn line block" data-act="bizedit" data-id="${b.id}">${ic('tool','s')}${T('biz_edit')}</button>`);
+ return rows.length?`<div class="card stack">${rows.join('')}</div>`:'';
+}
+SH.bizedit=s=>{const b=S.dir.find(x=>x.id===s.id)||{};return `<h2 class="h2">${T('biz_edit')}</h2><div class="stack" style="margin-top:12px"><div><label class="f" for="be-p">${T('biz_phone')}</label><input id="be-p" type="tel" inputmode="tel" maxlength="30" value="${esc(b.phone||'')}"><label class="f" for="be-w">${T('biz_wa')}</label><input id="be-w" type="tel" inputmode="tel" maxlength="30" value="${esc(b.wa||'')}"><label class="f" for="be-u">${T('biz_web')}</label><input id="be-u" maxlength="200" value="${esc(b.web||'')}" placeholder="https://"><label class="f" for="be-h">${T('biz_hours')}</label><textarea id="be-h" maxlength="300" placeholder="${esc(T('biz_hours_ph'))}">${esc(b.hours||'')}</textarea><label class="f" for="be-a">${T('address')}</label><input id="be-a" maxlength="120" value="${esc(b.addr||'')}"></div><button class="btn block" data-act="bizeditsave" data-id="${s.id}">${T('save')}</button></div>`};
+ACT.bizedit=d=>openSheet({v:'bizedit',id:d.id});
+ACT.bizeditsave=async d=>{
+ const {error}=await sb.rpc('update_my_business',{p_id:d.id,p_phone:val('be-p'),p_whatsapp:val('be-w'),p_website:val('be-u'),p_hours:val('be-h'),p_address:val('be-a')});
+ if(error)return toast(error.message);
+ closeSheet();await loadContent();renderOv(true);toast(T('biz_saved'));
+};
+function featuredSpot(){
+ const f=S.dir.filter(b=>b.status==='approved'&&b.feat);if(!f.length)return '';
+ const b=f[Math.floor(Date.now()/864e5)%f.length];
+ return `<button class="bn" style="width:100%;text-align:left" data-act="push" data-v="dir" data-id="${b.id}">${b.img?`<img class="bn-i" src="${esc(b.img)}" alt="">`:`<span class="bn-i bn-ph">${ic('star','l')}</span>`}<span class="bn-t"><span class="bn-tag">${T('featured')}</span><b>${esc(b.n)}</b><span class="bn-b">${esc(b.off||b.catName)}</span></span>${ic('right')}</button>`;
+}
+V.convert=function(){
+ const c=DB.cfg||{},r=Number(c.gbp_try_rate)||0;
+ if(!r)return {t:T('m_convert'),b:`<div class="card" style="text-align:center"><p class="mut">${T('cv_none')}</p></div>`};
+ const rs=r.toLocaleString(LOC[S.L],{maximumFractionDigits:4});
+ return {t:T('m_convert'),b:`<div class="stack"><div class="card stack"><div><label class="f" for="cv-g">${T('cv_gbp')}</label><input id="cv-g" type="number" inputmode="decimal" min="0" value="1"></div><div><label class="f" for="cv-t">${T('cv_try')}</label><input id="cv-t" type="number" inputmode="decimal" min="0" value="${(Math.round(r*100)/100)}"></div></div><div class="note g">${ic('info')}<div class="sm">${F('cv_rate',{r:rs,d:c.rate_updated_at?ymd(c.rate_updated_at):'–'})}</div></div></div>`};
+};
+document.addEventListener('input',e=>{
+ const r=Number((DB.cfg||{}).gbp_try_rate)||0;if(!r)return;
+ if(e.target.id==='cv-g'){const t=$('#cv-t');if(t)t.value=e.target.value===''?'':Math.round(parseFloat(e.target.value)*r*100)/100}
+ if(e.target.id==='cv-t'){const g=$('#cv-g');if(g)g.value=e.target.value===''?'':Math.round(parseFloat(e.target.value)/r*100)/100}
+});
 function footerV(){
  const c=DB.contact;
  return `<div class="foot"><button class="fx" data-act="footer" aria-expanded="${S.footer}" title="${T('footer')}" aria-label="${T('footer')}">${ic(S.footer?'up':'down')}</button>${S.footer?`<div class="fb card"><div class="row" style="flex-wrap:wrap;gap:16px"><a href="#" data-act="push" data-v="policy" data-id="about">${T('f_about')}</a><a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a><a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a><a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a><a href="#" data-act="push" data-v="policy" data-id="contact">${T('f_contact')}</a></div></div>`:''}</div>`;
@@ -504,22 +546,25 @@ ACT.dellisting=async d=>{const {error}=await sb.from('listings').delete().eq('id
 /* ---------- directory (list only, no map) ---------- */
 V.dirlist=function(){
  const top=cTop('directory'),dc=S.dcat&&top.some(c=>c.id===S.dcat)?S.dcat:'all',dd=S.ddist||'';
- const ls=S.dir.filter(b=>b.status==='approved').filter(b=>dc==='all'||b.cat===dc||(cById(b.cat)&&cById(b.cat).parent_id===dc)).filter(b=>!dd||b.district===dd);
+ const dtn=S.dtown||'';
+ const ls=S.dir.filter(b=>b.status==='approved').filter(b=>dc==='all'||b.cat===dc||(cById(b.cat)&&cById(b.cat).parent_id===dc)).filter(b=>!dd||b.district===dd).filter(b=>!dtn||b.town===dtn).filter(b=>!S.doff||b.off).sort((a,b)=>(b.feat?1:0)-(a.feat?1:0));
  const mine=S.dir.filter(b=>b.who==='me'&&b.status!=='approved');
  return {t:T('m_dir'),b:`<p class="mut" style="margin-bottom:10px">${T('dir_sub')}</p>${bannerHtml('directory')}
- <div class="chips"><button class="chip ${dc==='all'?'on':''}" data-act="dcat" data-id="all">${T('all')}</button>${top.map(c=>`<button class="chip ${dc===c.id?'on':''}" data-act="dcat" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div>
- <select id="dd" data-act-change="ddist" style="margin:10px 0" aria-label="${esc(T('su_district'))}"><option value="">${T('filter_area')}</option>${opts(gKids(null,'district'),dd,gOpt,r=>r.id)}</select>
+ <div class="chips"><button class="chip ${dc==='all'?'on':''}" data-act="dcat" data-id="all">${T('all')}</button><button class="chip ${S.doff?'on':''}" data-act="doff">${ic('gift','s')}${T('discounts')}</button>${top.map(c=>`<button class="chip ${dc===c.id?'on':''}" data-act="dcat" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div>
+ <select id="dd" data-act-change="ddist" style="margin:10px 0" aria-label="${esc(T('su_district'))}"><option value="">${T('filter_area')}</option>${opts(gKids(null,'district'),dd,gOpt,r=>r.id)}</select>${dd?`<select id="dt" style="margin-bottom:10px" aria-label="${esc(T('su_town'))}"><option value="">${T('all_towns')}</option>${opts(gKids(dd,'town'),dtn,gOpt,r=>r.id)}</select>`:''}
  ${mine.length?`<div class="stack" style="margin-bottom:12px">${mine.map(dcard).join('')}</div>`:''}
  <div class="stack">${ls.length?ls.map(dcard).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_dir')}</p></div>`}</div>`};
 };
-document.addEventListener('change',e=>{if(e.target.id==='dd'){S.ddist=e.target.value;renderOv(true)}});
-function dcard(b){return `<button class="listrow" data-act="push" data-v="dir" data-id="${b.id}"><span class="th">${b.img?`<img class="art" src="${esc(b.img)}" alt="">`:art('tools',hueOf(b.id),0,'')}</span><span class="grow"><b>${esc(b.n)}</b><span class="xs mut">${esc(b.catName)} · ${esc(b.area)}</span></span>${b.status!=='approved'?`<span class="pill red">${T('dir_pending')}</span>`:((recN(b.id)?`<span class="pill">${ic('heart','s')}${recN(b.id)}</span>`:'')+(b.ver?`<span class="pill">${ic('vcheck','s')}</span>`:''))}</button>`}
+document.addEventListener('change',e=>{if(e.target.id==='dd'){S.ddist=e.target.value;S.dtown='';renderOv(true)}if(e.target.id==='dt'){S.dtown=e.target.value;renderOv(true)}});
+ACT.doff=()=>{S.doff=!S.doff;renderOv(true)};
+function dcard(b){return `<button class="listrow" data-act="push" data-v="dir" data-id="${b.id}"><span class="th">${b.img?`<img class="art" src="${esc(b.img)}" alt="">`:art('tools',hueOf(b.id),0,'')}</span><span class="grow"><b>${esc(b.n)}</b><span class="xs mut">${esc(b.catName)} · ${esc(b.area)}</span></span>${b.feat?`<span class="pill">${ic('star','s')}${T('featured')}</span>`:''}${b.status!=='approved'?`<span class="pill red">${T('dir_pending')}</span>`:((recN(b.id)?`<span class="pill">${ic('heart','s')}${recN(b.id)}</span>`:'')+(b.ver?`<span class="pill">${ic('vcheck','s')}</span>`:''))}</button>`}
 V.dir=function(o){
  const b=S.dir.find(x=>x.id===o.id);if(!b)return {t:T('m_dir'),b:''};
  const addr=[b.addr,b.area].filter(Boolean).join(', ');
  return {t:esc(b.n),b:`<div class="stack">${b.img?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(b.img)}" alt=""></div></div></div>`:''}<div class="card"><div class="row"><span class="lf">${esc(b.n[0])}</span><div class="grow"><h1 class="h2">${esc(b.n)}</h1><div class="sm mut">${esc(b.catName)} · ${esc(b.area)}</div></div></div><div style="margin-top:10px"><span class="pill ${b.ver?'':'red'}">${ic(b.ver?'vcheck':'info','s')}${b.ver?T('verified'):T('unverified')}</span></div></div>
  ${b.off?`<div class="card" style="background:var(--gs)"><div class="xs mut" style="text-transform:uppercase;letter-spacing:.06em">${T('offer_t')}</div><div class="h2" style="margin-top:4px">${esc(b.off)}</div></div>`:''}
  <div class="card stack"><div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('address')}</div><b>${esc(addr)}</b></div></div><a class="btn soft block" href="${mapsUrl((b.n+' '+addr).trim())}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a></div>
+ ${bizContact(b)}
  ${recBlock(b)}
  ${b.who!=='me'?`<div class="row"><button class="btn grow" data-act="msg" data-to="${esc(b.n)}" data-uid="${b.who}" data-about="${esc(b.n)}">${ic('msg','s')}${T('msg_biz')}</button></div><button class="btn line block" data-act="report" data-kind="biz" data-id="${b.id}">${ic('flag','s')}${T('report_biz')}</button>`:''}</div>`};
 };

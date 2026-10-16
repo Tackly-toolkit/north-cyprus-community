@@ -230,6 +230,7 @@ V.adm_settings=function(){
  ${s.billing_on?'':`<label class="f" for="s-lm" style="margin-top:12px">When you switch on: free months for every current member, counted from that day</label><input id="s-lm" type="number" min="0" value="${s.free_months??3}"><div class="xs mut" style="margin-top:6px">Set the fee below and save first. Switching on never locks anyone straight away. Members with longer free time keep it.</div>`}</div><div class="card stack"><b>Fees and timing</b><div class="xs mut">Members see the fee only once charging is on.</div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-fm">Free months for new sign-ups</label><input id="s-fm" type="number" min="0" value="${s.free_months}"></div><div><label class="f" for="s-gd">Days to pay after due date</label><input id="s-gd" type="number" min="0" value="${s.grace_days}"></div></div>
  <div class="grid2" style="gap:10px"><div><label class="f" for="s-ft">Monthly fee (TL)</label><input id="s-ft" type="number" min="0" inputmode="decimal" value="${s.monthly_fee_try??''}"></div><div><label class="f" for="s-fg">Monthly fee (GBP, optional)</label><input id="s-fg" type="number" min="0" step="0.01" inputmode="decimal" value="${s.monthly_fee_gbp??''}"></div></div>
+ <label class="f" for="s-rate">Pound to lira rate for the converter (£1 = ? TL). You set this by hand.</label><input id="s-rate" type="number" min="0" step="0.0001" inputmode="decimal" value="${s.gbp_try_rate??''}"><div class="xs mut">${s.rate_updated_at?'Last set '+aDate(s.rate_updated_at):'Not set yet. The converter stays empty until you set it.'}</div>
  <label class="f" for="s-em">Contact email (shown on the lock page; add the professional address here later)</label><input id="s-em" type="email" value="${esc(s.contact_email||'')}">
  ${aBtn('asave',`${ic('check','s')}Save settings`,'','')}</div><p class="xs mut">Free months apply to people who sign up after you change them. Days to pay apply to everyone straight away.</p></div>`};
 };
@@ -243,9 +244,9 @@ ACT.abilling=async()=>{const nb=!ADM.settings.billing_on;
  }await aok(sb.from('app_settings').update({billing_on:nb,updated_at:new Date().toISOString()}).eq('id',1));aLog('billing',{on:nb});DB.cfg.billing_on=nb;toast('Saved');admReload()};
 ACT.asave=async()=>{
  const n=id=>{const v=val(id);return v===''?null:Number(v)};
- const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:null,contact_whatsapp:null,contact_email:val('s-em')||null,updated_at:new Date().toISOString()};
+ const row={free_months:n('s-fm')??3,grace_days:n('s-gd')??4,monthly_fee_try:n('s-ft'),monthly_fee_gbp:n('s-fg'),contact_phone:null,contact_whatsapp:null,contact_email:val('s-em')||null,gbp_try_rate:n('s-rate'),rate_updated_at:(n('s-rate')!==(ADM.settings.gbp_try_rate==null?null:Number(ADM.settings.gbp_try_rate)))?new Date().toISOString():ADM.settings.rate_updated_at,updated_at:new Date().toISOString()};
  await aok(sb.from('app_settings').update(row).eq('id',1));aLog('settings',row);
- DB.cfg.free_months=row.free_months;DB.cfg.grace_days=row.grace_days;DB.cfg.monthly_fee_try=row.monthly_fee_try;DB.cfg.monthly_fee_gbp=row.monthly_fee_gbp;DB.contact={email:row.contact_email||''};
+ DB.cfg.gbp_try_rate=row.gbp_try_rate;DB.cfg.rate_updated_at=row.rate_updated_at;DB.cfg.free_months=row.free_months;DB.cfg.grace_days=row.grace_days;DB.cfg.monthly_fee_try=row.monthly_fee_try;DB.cfg.monthly_fee_gbp=row.monthly_fee_gbp;DB.contact={email:row.contact_email||''};
  toast('Saved');admReload();
 };
 
@@ -267,12 +268,15 @@ ACT.areprm=async d=>{
 V.adm_directory=function(){
  const ds=ADM.dir||[];
  return {t:'Business directory',b:`<div class="stack">${ds.length?ds.map(b=>`<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(b.name)}</b><div class="xs mut">${esc(cName(b.category_id))} · ${esc(areaLabel(b.district_id,b.town_id,b.area_id))}${b.address?' · '+esc(b.address):''}</div></div><span class="pill ${b.status==='approved'?'':'red'}">${b.status}</span></div>
-  <label class="f" for="d-o-${b.id}">Offer shown to members</label><input id="d-o-${b.id}" maxlength="100" value="${esc(b.offer||'')}">
-  <div class="row" style="flex-wrap:wrap">${b.status!=='approved'?aBtn('adir',`data-id="${b.id}" data-s="approved"`,'Approve',''):aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Hide')}${b.status==='pending'?aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Reject','line'):''}${aBtn('adirv',`data-id="${b.id}" data-v="${b.verified?0:1}"`,b.verified?'Remove verified':'Mark verified')}${aBtn('adiro',`data-id="${b.id}"`,'Save offer')}${aBtn('adirdel',`data-id="${b.id}"`,ic('trash','s'),'line')}</div></div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No businesses yet.</p></div>'}</div>`};
+  <label class="f" for="d-o-${b.id}">Offer shown to members (shows under Discounts)</label><input id="d-o-${b.id}" maxlength="100" value="${esc(b.offer||'')}">
+  <div class="grid2" style="gap:10px"><div><label class="f" for="d-p-${b.id}">Phone (with country code)</label><input id="d-p-${b.id}" maxlength="30" value="${esc(b.phone||'')}"></div><div><label class="f" for="d-w-${b.id}">WhatsApp</label><input id="d-w-${b.id}" maxlength="30" value="${esc(b.whatsapp||'')}"></div></div>
+  <label class="f" for="d-u-${b.id}">Website</label><input id="d-u-${b.id}" maxlength="200" value="${esc(b.website||'')}"><label class="f" for="d-h-${b.id}">Opening times</label><input id="d-h-${b.id}" maxlength="300" value="${esc(b.opening_hours||'')}"><label class="f" for="d-a-${b.id}">Address</label><input id="d-a-${b.id}" maxlength="120" value="${esc(b.address||'')}">
+  <div class="row" style="flex-wrap:wrap">${b.status!=='approved'?aBtn('adir',`data-id="${b.id}" data-s="approved"`,'Approve',''):aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Hide')}${b.status==='pending'?aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Reject','line'):''}${aBtn('adirv',`data-id="${b.id}" data-v="${b.verified?0:1}"`,b.verified?'Remove verified':'Mark verified')}${aBtn('adiro',`data-id="${b.id}"`,'Save details')}${aBtn('adirf',`data-id="${b.id}" data-v="${b.featured?0:1}"`,b.featured?'Remove featured':'Make featured','line')}${aBtn('adirdel',`data-id="${b.id}"`,ic('trash','s'),'line')}</div></div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No businesses yet.</p></div>'}</div>`};
 };
 ACT.adir=async d=>{await aok(sb.from('directory').update({status:d.s}).eq('id',d.id));aLog('directory',{id:d.id,status:d.s});admReload();loadContent()};
 ACT.adirv=async d=>{await aok(sb.from('directory').update({verified:d.v==='1'}).eq('id',d.id));aLog('verify',{id:d.id,v:d.v});admReload();loadContent()};
-ACT.adiro=async d=>{await aok(sb.from('directory').update({offer:val('d-o-'+d.id)||null}).eq('id',d.id));toast('Saved');loadContent()};
+ACT.adiro=async d=>{const g=k=>val(k+d.id)||null;await aok(sb.from('directory').update({offer:g('d-o-'),phone:g('d-p-'),whatsapp:g('d-w-'),website:g('d-u-'),opening_hours:g('d-h-'),address:g('d-a-')}).eq('id',d.id));toast('Saved');loadContent()};
+ACT.adirf=async d=>{await aok(sb.from('directory').update({featured:d.v==='1'}).eq('id',d.id));aLog('featured',{id:d.id,v:d.v});admReload();loadContent()};
 ACT.adirdel=async d=>{await aok(sb.from('directory').delete().eq('id',d.id));aLog('directory_delete',{id:d.id});admReload();loadContent()};
 
 /* ---------- banners ---------- */
