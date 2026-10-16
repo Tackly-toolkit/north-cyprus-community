@@ -330,10 +330,15 @@ function acctCard(){
 }
 
 /* ---------- banners (all off until the admin switches one on) ---------- */
+function bannerCard(b){
+ const tag=`<span class="bn-tag">${T('sponsor')}</span>`;
+ const inner=`${b.image_url?`<img class="bn-i" src="${esc(b.image_url)}" alt="" loading="lazy">`:`<span class="bn-i bn-ph">${ic('zap','l')}</span>`}<span class="bn-t">${tag}<b>${esc(b.headline||'')}</b>${b.body?`<span class="bn-b">${esc(b.body)}</span>`:''}</span>${b.link_url?`<span class="bn-go">${ic('right')}</span>`:''}`;
+ return b.link_url?`<a class="bn" href="${esc(b.link_url)}" target="_blank" rel="noopener sponsored">${inner}</a>`:`<div class="bn">${inner}</div>`;
+}
 function bannerHtml(zone){
  const today=new Date().toISOString().slice(0,10);
- const list=(DB.banners||[]).filter(b=>b.enabled&&b.zone===zone&&(!b.starts_on||b.starts_on<=today)&&(!b.ends_on||b.ends_on>=today)&&(!b.pages||!b.pages.length||b.pages.includes(S.tab)));
- return list.map(b=>`<div class="card banner">${b.image_url?`<img src="${esc(b.image_url)}" alt="" style="display:block;width:100%;height:auto;max-height:170px;object-fit:cover;border-radius:12px;margin-bottom:8px">`:''}<div class="xs mut" style="text-transform:uppercase;letter-spacing:.06em">${T('sponsor')}</div><b>${esc(b.headline||'')}</b>${b.body?`<div class="sm mut">${esc(b.body)}</div>`:''}${b.link_url?`<a class="btn soft" style="margin-top:8px" href="${esc(b.link_url)}" target="_blank" rel="noopener">${T('open')}</a>`:''}</div>`).join('');
+ const list=(DB.banners||[]).filter(b=>b.enabled&&(b.zone===zone||b.zone==='top')&&(!b.starts_on||b.starts_on<=today)&&(!b.ends_on||b.ends_on>=today));
+ return list.slice(0,2).map(bannerCard).join('');
 }
 N({me_vis_d:["Join to get your own profile, post, message and sell.","Profil, paylaşım, mesaj ve satış için katılın.","Dołącz, aby mieć profil, pisać, wysyłać wiadomości i sprzedawać.","Присоединяйтесь, чтобы создать профиль, писать, переписываться и продавать."]});
 N({
@@ -515,7 +520,7 @@ ACT.dcat=d=>{S.dcat=d.id;renderOv(true)};
 /* ---------- meetups (events) ---------- */
 V.events=function(){
  const card=e=>rowt('push','event',e.id,thmRaw('group',hueOf(e.id)),esc(e.t),`${ymd(e.starts)} · ${new Date(e.starts).toLocaleTimeString(LOC[S.L],{hour:'2-digit',minute:'2-digit'})}${e.area?' · '+esc(e.area):''}`,e.goingMe?`<span class="pill">${ic('check','s')}${T('going_on')}</span>`:undefined);
- return {t:T('m_events'),b:`<div class="stack"><button class="btn out block" data-act="create" data-type="meetup">${ic('plus','s')}${T('cr_meetup')}</button>${S.meetups.length?S.meetups.map(card).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_ev')}</p></div>`}</div>`};
+ return {t:T('m_events'),b:`<div class="stack">${bannerHtml('events')}<button class="btn out block" data-act="create" data-type="meetup">${ic('plus','s')}${T('cr_meetup')}</button>${S.meetups.length?S.meetups.map(card).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_ev')}</p></div>`}</div>`};
 };
 V.event=function(o){
  const e=S.meetups.find(x=>x.id===o.id);if(!e)return {t:T('m_events'),b:''};
@@ -634,7 +639,7 @@ function index(){
 
 /* ---------- Me ---------- */
 function meV(){
- let h=`<div class="stack">`;
+ let h=`<div class="stack">${bannerHtml('me')}`;
  if(!isM()){
   h+=`<div class="card" style="text-align:center"><div class="mark" style="margin:0 auto 10px;width:56px;height:56px">${ic('user','l')}</div><h2 class="h2">${T('me_vis_t')}</h2><p class="mut" style="margin:6px 0 14px">${T('me_vis_d')}</p><div class="stack"><button class="btn block" data-act="signup">${T('join_free')}</button><button class="btn soft block" data-act="signinsheet">${T('sign_in')}</button></div></div>`;
  }else{
