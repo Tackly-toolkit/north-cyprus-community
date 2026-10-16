@@ -344,7 +344,7 @@ ACT.acsave=async d=>{const n=val('ck-'+d.id);if(!n)return;await aok(sb.from('cat
 ACT.actog=async d=>{await aok(sb.from('categories').update({active:d.v==='1'}).eq('id',d.id));await refreshStatic();admReload()};
 ACT.acadd=async d=>{const n=val('c-new');if(!n)return;let id=d.kind+'-'+slug(n);if((ADM.cats||[]).some(x=>x.id===id))id+='-'+Math.floor(Math.random()*90+10);await aok(sb.from('categories').insert({id,kind:d.kind,parent_id:d.parent||null,name:n}));await refreshStatic();admReload()};
 V.adm_lists=function(){
- const ls=ADM.lists||[],kinds=[['condition','Condition'],['currency','Currency'],['handover','Collection or delivery'],['bedrooms','Bedrooms (property)'],['furnished','Furnishing (property)']];
+ const ls=ADM.lists||[],kinds=[['condition','Condition'],['currency','Currency'],['handover','Collection or delivery'],['bedrooms','Bedrooms (property)'],['furnished','Furnishing (property)'],['property_type','Property type'],['bathrooms','Bathrooms (property)']];
  return {t:'Dropdown lists',b:`<div class="stack">${kinds.map(k=>`<div class="card stack"><b>${k[1]}</b>${ls.filter(x=>x.kind===k[0]).map(x=>`<div class="row"><span class="grow" style="${x.active?'':'opacity:.5'}">${esc(x.value)}</span>${aBtn('altog',`data-kind="${k[0]}" data-val="${esc(x.value)}" data-v="${x.active?0:1}"`,x.active?'Hide':'Show','line')}</div>`).join('')}<div class="row"><input id="l-${k[0]}" placeholder="Add a value" maxlength="40">${aBtn('aladd',`data-kind="${k[0]}"`,ic('plus','s'))}</div></div>`).join('')}</div>`};
 };
 ACT.altog=async d=>{await aok(sb.from('lists').update({active:d.v==='1'}).eq('kind',d.kind).eq('value',d.val));await refreshStatic();admReload()};
