@@ -128,7 +128,7 @@ const GC=[
 ["Bereavement in North Cyprus","Kuzey Kıbrıs'ta yas süreci","Żałoba w Północnym Cyprze","Утрата близкого на Северном Кипре"]]},
 {id:'welfare',ic:'heart',n:["Welfare & health","Sosyal destek ve sağlık","Opieka i zdrowie","Забота и здоровье"],it:[
 ["Healthcare guide","Sağlık rehberi","Przewodnik po opiece zdrowotnej","Руководство по здравоохранению"],
-["Ping Pal Buddy sign-up","Ping Pal Buddy kaydı","Rejestracja w Ping Pal Buddy","Регистрация в Ping Pal Buddy"]]},
+["Looking after each other","Birbirimize destek olmak","Dbamy o siebie nawzajem","Забота друг о друге"]]},
 {id:'explore',ic:'compass',n:["Explore","Keşfet","Odkrywaj","Открывайте"],it:[
 ["Holiday home guide","Tatil evi rehberi","Przewodnik po domach wakacyjnych","Руководство по домам для отдыха"],
 ["Places of interest","Gezilecek yerler","Ciekawe miejsca","Достопримечательности"],
