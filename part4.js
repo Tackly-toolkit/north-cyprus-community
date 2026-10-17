@@ -482,7 +482,7 @@ function exploreV(){
 }
 N({discounts:["Discounts","İndirimler","Zniżki","Скидки"],featured:["Featured","Öne çıkan","Wyróżnione","Рекомендуем"],all_towns:["All towns","Tüm kasabalar","Wszystkie miasta","Все города"],
  m_convert:["Pound to lira","Sterlin–Lira","Funt na liry","Фунт в лиры"],cv_gbp:["Pounds (£)","Sterlin (£)","Funty (£)","Фунты (£)"],cv_try:["Lira (₺)","Lira (₺)","Liry (₺)","Лиры (₺)"],
- cv_rate:["Rate used: £1 = ₺{r}. Set by our team on {d}. Banks and exchange offices give their own rate, so check before you change money.","Kullanılan kur: £1 = ₺{r}. Ekibimiz {d} tarihinde belirledi. Banka ve döviz büroları kendi kurunu uygular, bozdurmadan önce kontrol edin.","Kurs: £1 = ₺{r}. Ustawiony przez zespół {d}. Banki i kantory mają własne kursy, sprawdź przed wymianą.","Курс: £1 = ₺{r}. Установлен командой {d}. У банков и обменников свой курс, проверьте перед обменом."],
+ cv_rate:["Rate used: £1 = ₺{r}. Updated {d} from the European Central Bank rate. Banks and exchange offices give their own rate, so check before you change money.","Kullanılan kur: £1 = ₺{r}. {d} tarihinde Avrupa Merkez Bankası kurundan güncellendi. Banka ve döviz büroları kendi kurunu uygular, bozdurmadan önce kontrol edin.","Kurs: £1 = ₺{r}. Zaktualizowany {d} według kursu Europejskiego Banku Centralnego. Banki i kantory mają własne kursy, sprawdź przed wymianą.","Курс: £1 = ₺{r}. Обновлён {d} по курсу Европейского центрального банка. У банков и обменников свой курс, проверьте перед обменом."],
  cv_none:["The rate has not been set yet. Check back soon.","Kur henüz belirlenmedi. Yakında tekrar bakın.","Kurs nie został jeszcze ustawiony.","Курс ещё не задан."],
  biz_hours:["Opening times","Çalışma saatleri","Godziny otwarcia","Часы работы"],biz_web:["Website","Web sitesi","Strona","Сайт"],biz_call:["Call","Ara","Zadzwoń","Позвонить"],biz_edit:["Edit business details","İşletme bilgilerini düzenle","Edytuj dane firmy","Изменить данные"],
  biz_phone:["Phone (with country code)","Telefon (ülke koduyla)","Telefon (z numerem kierunkowym)","Телефон (с кодом страны)"],biz_wa:["WhatsApp (with country code)","WhatsApp (ülke koduyla)","WhatsApp (z numerem kierunkowym)","WhatsApp (с кодом страны)"],
@@ -549,17 +549,29 @@ function infoCard(i){
  const src=[i.checked_on?F('ii_checked',{d:ymd(i.checked_on)}):'',i.source_url?`<a href="${esc(i.source_url)}" target="_blank" rel="noopener nofollow">${T('ii_source')}</a>`:''].filter(Boolean).join(' · ');
  return `<div class="card stack"><b style="overflow-wrap:anywhere">${esc(i.title)}</b>${rows.join('')}${src?`<div class="xs mut">${src}</div>`:''}</div>`;
 }
+const ICAT_IC={hospital:'heart',pharmacy_duty:'plus',police:'shield',fire_rescue:'zap',emergency_other:'buoy',embassy:'flag',muktar:'user',municipality:'home',government:'file',transport:'truck',power:'zap',museum:'book',historic:'star',beach:'sun',nature:'island',other:'pin'};
 function infoView(kind,cats,title){
- const all=infoOf(kind),cur=S['icat_'+kind]||'all',list=all.filter(i=>cur==='all'||i.category===cur),have=cats.filter(c=>all.some(i=>i.category===c));
- return {t:title,b:`<div class="stack">${all.length?`<div class="chips"><button class="chip ${cur==='all'?'on':''}" data-act="icat" data-k="${kind}" data-id="all">${T('all')}</button>${have.map(c=>`<button class="chip ${cur===c?'on':''}" data-act="icat" data-k="${kind}" data-id="${c}">${T('ic_'+c)}</button>`).join('')}</div>${list.map(infoCard).join('')}`:`<div class="card" style="text-align:center"><p class="mut">${T('ii_empty')}</p></div>`}</div>`};
+ const all=infoOf(kind),cur=S['icat_'+kind]||'all',have=cats.filter(c=>all.some(i=>i.category===c));
+ if(!all.length)return {t:title,b:`<div class="stack"><div class="card" style="text-align:center"><p class="mut">${T('ii_empty')}</p></div></div>`};
+ if(cur==='all'||!have.includes(cur))return {t:title,b:`<div class="stack"><div class="grid2">${have.map(c=>`<button class="mod" style="min-height:96px" data-act="icat" data-k="${kind}" data-id="${c}"><span class="lf">${ic(ICAT_IC[c]||'pin')}</span><b>${T('ic_'+c)}</b><small>${all.filter(i=>i.category===c).length}</small></button>`).join('')}</div></div>`};
+ return {t:title,b:`<div class="stack"><button class="btn soft" style="align-self:flex-start" data-act="icat" data-k="${kind}" data-id="all">${ic('left','s')}${T('ic_back')}</button><h2 class="h3">${T('ic_'+cur)}</h2>${all.filter(i=>i.category===cur).map(infoCard).join('')}</div>`};
 }
+N({ic_back:["All categories","Tüm kategoriler","Wszystkie kategorie","Все категории"]});
 ACT.icat=d=>{S['icat_'+d.k]=d.id;renderOv(true)};
 V.places=()=>infoView('place',INFO_P,T('m_places'));
 V.contacts=()=>infoView('contact',INFO_C,T('m_contacts'));
 V.northmap=function(){
- const pins={girne:[179.1,87.9],lefkosa:[187,118.3],gazimagusa:[275.4,129.7],iskele:[269.1,97.4],guzelyurt:[126.9,114.5]};
+ const R={
+  girne:{p:'488,272 545,298 610,300 700,303 790,318 925,300 930,312 862,350 785,383 612,380 600,376 565,362 500,365',l:[690,345],c:1},
+  guzelyurt:{p:'500,365 565,362 600,376 612,380 610,430 595,440 565,432 525,452 492,425',l:[545,404],c:2},
+  lefke:{p:'365,420 430,445 437,490 455,480 495,478 525,452 492,425 500,415 440,412',l:[455,448],c:3},
+  lefkosa:{p:'612,380 785,383 862,350 868,450 925,490 925,522 870,520 840,495 815,500 800,545 790,460 775,420 745,420 700,432 655,412 610,430',l:[708,420],c:4},
+  gazimagusa:{p:'862,350 930,312 925,300 1000,265 1020,266 995,325 1015,345 1027,388 1075,376 1070,405 1070,437 1128,500 1070,498 1050,500 1030,518 940,525 925,490 868,450',l:[985,435],c:5},
+  iskele:{p:'1020,266 1100,245 1200,205 1290,165 1335,120 1390,98 1430,85 1478,68 1470,100 1420,125 1370,155 1300,225 1220,270 1165,310 1170,325 1100,340 1075,376 1027,388 1015,345 995,325',l:[1160,300],c:6}};
  const ds=gKids(null,'district');
- const svg=`<svg viewBox="0 0 400 160" role="img" aria-label="${esc(T('m_map'))}" style="width:100%;height:auto;display:block"><rect width="400" height="160" rx="16" fill="var(--gs)"/><polygon points="65.3,118.3 81.1,95.5 117.4,76.5 152.2,84.1 179.1,87.9 231.2,86 270.7,76.5 294.4,57.5 333.9,38.5 378.1,21.4 373.4,48 349.7,67 310.2,95.5 278.6,114.5 273.9,133.5 267.5,143 231.2,133.5 187,122.1 144.3,129.7 104.8,137.3 81.1,129.7" fill="var(--card)" stroke="var(--g)" stroke-width="2" stroke-linejoin="round"/>${ds.map(d=>{const p=pins[d.id];return p?`<circle cx="${p[0]}" cy="${p[1]}" r="6" fill="var(--r)"/><text x="${p[0]}" y="${p[1]-10}" text-anchor="middle" font-size="11" font-weight="700" fill="var(--fg)">${esc(d.names[0])}</text>`:''}).join('')}</svg>`;
+ const fills=['','#8fcaa9','#b5dcc0','#d6ecd6','#f3bda9','#f6d792','#9ccbe2'];
+ const land='105,480 150,520 240,745 365,790 500,835 555,840 545,785 600,745 700,745 800,700 900,660 920,580 1050,585 1100,560 1180,572 1130,500 925,525 812,545 790,470 740,420 650,413 600,440 525,452 440,490 365,420 270,430 240,460 130,480';
+ const svg=`<svg viewBox="280 50 1230 530" role="img" aria-label="${esc(T('m_map'))}" style="width:100%;height:auto;display:block;border-radius:16px"><rect x="270" y="40" width="1250" height="550" fill="color-mix(in srgb,var(--g) 14%,var(--card))"/><polygon points="${land}" fill="var(--bg)" stroke="var(--mut)" stroke-width="3" stroke-linejoin="round" opacity=".8"/>${ds.map(d=>{const r=R[d.id];return r?`<a href="${esc(mapsUrl(d.names[0]+' district'))}" target="_blank" rel="noopener" aria-label="${esc(d.names[0])}"><polygon points="${r.p}" fill="${fills[r.c]}" stroke="#fff" stroke-width="5" stroke-linejoin="round"/><text x="${r.l[0]}" y="${r.l[1]}" text-anchor="middle" font-size="34" font-weight="700" fill="#1d3b31" style="paint-order:stroke;stroke:#fff;stroke-width:7px">${esc(d.names[0])}</text></a>`:''}).join('')}</svg>`;
  return {t:T('m_map'),b:`<div class="stack"><div class="card" style="padding:8px">${svg}</div><p class="sm mut">${T('map_note')}</p>${ds.map(d=>`<a class="listrow" href="${mapsUrl(d.names[0]+' district')}" target="_blank" rel="noopener"><span class="lf">${ic('pin')}</span><span class="grow"><b>${esc(gOpt(d))}</b></span>${ic('compass')}</a>`).join('')}</div>`};
 };
 function footerV(){
@@ -1220,8 +1232,14 @@ function feedItems(){
  const f=S.ff==='friends'?'friends':'all',fr=friendIds();
  return S.posts.filter(p=>!p.club).filter(p=>f==='all'||p.who==='me'||fr.has(p.who)).slice().sort((a,b)=>a.m-b.m);
 }
+N({wl_hi:["Welcome","Hoş geldiniz","Witamy","Добро пожаловать"],wl_sub:["Your circle of friends and neighbours in North Cyprus.","Kuzey Kıbrıs'taki arkadaşlarınız ve komşularınızın çevresi.","Twój krąg przyjaciół i sąsiadów na Cyprze Północnym.","Ваш круг друзей и соседей на Северном Кипре."],wl_credit:["Photos from Pexels","Fotoğraflar: Pexels","Zdjęcia: Pexels","Фото: Pexels"]});
+function welcomeHero(){
+ if(DB.cfg&&DB.cfg.welcome_hero===false)return '';
+ const n=(P.me&&P.me.n&&P.me.n!=='You')?String(P.me.n).trim().split(/\s+/)[0]:'';
+ return `<section class="wl" aria-label="${esc(T('wl_hi'))}">${[1,2,3,4].map(i=>`<img src="/welcome/w${i}.jpg" alt="" class="wl-i" style="animation-delay:${(i-1)*6}s" ${i>1?'loading="lazy"':''}>`).join('')}<div class="wl-s"></div><div class="wl-t"><h1 class="wl-h">${esc(T('wl_hi'))}${n?', '+esc(n):''}</h1><p>${T('wl_sub')}</p></div><span class="wl-c">${T('wl_credit')}</span></section>`;
+}
 function feedV(){
- let h='<div class="stack">'+notes();
+ let h='<div class="stack">'+notes()+welcomeHero();
  if(isM()){
   const fr=[...friendIds()].filter(k=>P[k]).slice(0,6);
   h+=`<section><h2 class="h3">${T('fr_title')}</h2><div class="leaves">`+fr.map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${P[k].img?`<img src="${esc(P[k].img)}" alt="">`:esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+`<button class="leaf inv" data-act="push" data-v="friends"><span class="lf">${ic('plus')}</span><span class="n">${T('fr_find')}</span></button></div></section>`;

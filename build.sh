@@ -13,5 +13,5 @@ head='''<!doctype html>
 open('dist/index.html','w',encoding='utf8').write(head+b+'\n</body></html>\n')
 PY
 rm -f dist/build.html
-cp public/* dist/
+cp -r public/* dist/
 echo built $(wc -c < dist/index.html) bytes
