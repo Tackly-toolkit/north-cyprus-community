@@ -1,0 +1,3 @@
+-- Applied live as 022_auto_rate_lefke, 023_welcome_hero, 024_public_config_welcome.
+-- app_settings.rate_auto / rate_source; refresh_gbp_try_rate() (ECB via frankfurter.dev) scheduled daily 06:10 UTC by pg_cron;
+-- geo district 'lefke'; app_settings.welcome_hero; public_config() exposes welcome_hero.
