@@ -582,13 +582,26 @@ function footerV(){
 /* ---------- Community marketplace ---------- */
 const lmoney=l=>l.price?money(l.price,l.cur)+(l.per==='month'?' / '+T('per_month'):''):(l.intent==='looking'?T('any_budget'):T('free'));
 function thumbFor(l){return l.img?`<img class="art" src="${esc(l.img)}" alt="">`:art('tag',hueOf(l.id),0,l.t)}
+const catTile=(act,id,name,n,icn,extra)=>`<button class="mod" style="min-height:96px" data-act="${act}" data-id="${id}" ${extra||''}><span class="lf">${ic(icn)}</span><b>${esc(name)}</b><small>${n}</small></button>`;
+N({see_all:["See everything","Hepsini gör","Zobacz wszystko","Показать всё"]});
+const _push=ACT.push;ACT.push=d=>{if(d.v==='dirlist'){S.dshow=false;S.dcat='all';S.doff=false;S.ddist='';S.dtown=''}_push(d)};
+const _tab=ACT.tab;ACT.tab=d=>{if(d.id==='market'){S.mshow=false;S.mcat='all';S.mlook=false}_tab(d)};
+ACT.mcat=d=>{S.mcat=d.id;S.mshow=true;renderMain();window.scrollTo(0,0)};
+ACT.mlook=()=>{S.mlook=true;S.mshow=true;renderMain();window.scrollTo(0,0)};
+ACT.mback=()=>{S.mshow=false;S.mcat='all';S.mlook=false;renderMain();window.scrollTo(0,0)};
 function marketV(){
  const top=cTop('market'),cur=S.mcat==='all'||!top.some(c=>c.id===S.mcat)?'all':S.mcat;
+ const head=`<div class="row"><h1 class="h1 grow">${T('mk_title')}</h1><button class="btn out" data-act="create" data-type="listing">${ic('plus','s')}${T('sell')}</button></div>`;
+ const note=`<div class="note g">${ic('info')}<div class="sm">${T('mk_note')}</div></div>`;
+ if(!S.mshow){
+  const cnt=id=>S.listings.filter(l=>l.catTop===id).length;
+  return `<div class="stack">${notes()}${head}${bannerHtml('market')}<div class="grid2">${catTile('mcat','all',T('see_all'),S.listings.length,'list')}${catTile('mlook','x',T('looking_for'),S.listings.filter(l=>l.intent==='looking').length,'search')}${top.map(c=>catTile('mcat',c.id,c.name,cnt(c.id),'tag')).join('')}</div>${note}</div>`;
+ }
  const ls=S.listings.filter(l=>(cur==='all'||l.catTop===cur)&&(!S.mlook||l.intent==='looking'));
- return `<div class="stack">${notes()}<div class="row"><h1 class="h1 grow">${T('mk_title')}</h1><button class="btn out" data-act="create" data-type="listing">${ic('plus','s')}${T('sell')}</button></div>
- <div class="chips"><button class="chip ${cur==='all'?'on':''}" data-act="mcat" data-id="all">${T('all')}</button><button class="chip ${S.mlook?'on':''}" data-act="mlook">${T('looking_for')}</button>${top.map(c=>`<button class="chip ${cur===c.id?'on':''}" data-act="mcat" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div>${bannerHtml('market')}
+ const ttl=S.mlook?T('looking_for'):(cur==='all'?T('see_all'):esc((cById(cur)||{}).name||''));
+ return `<div class="stack">${notes()}${head}<button class="btn soft" style="align-self:flex-start" data-act="mback">${ic('left','s')}${T('ic_back')}</button><h2 class="h3">${ttl}</h2>${bannerHtml('market')}
  ${ls.length?`<div class="grid2">${ls.map(l=>`<button class="tile" data-act="push" data-v="listing" data-id="${l.id}"><span class="pic">${thumbFor(l)}<span class="pr">${lmoney(l)}</span></span><span class="tb">${l.intent==='looking'?`<span class="pill" style="align-self:flex-start">${T('looking_for')}</span>`:''}<b>${esc(l.t)}</b><span class="xs mut">${esc(l.area)}</span></span></button>`).join('')}</div>`:`<div class="card" style="text-align:center"><p class="mut">${T('none_listings')}</p></div>`}
- <div class="note g">${ic('info')}<div class="sm">${T('mk_note')}</div></div></div>`;
+ ${note}</div>`;
 }
 V.listing=function(o){
  const l=S.listings.find(x=>x.id===o.id);if(!l)return {t:T('nav_market'),b:''};
@@ -614,13 +627,13 @@ V.dirlist=function(){
  const ls=S.dir.filter(b=>b.status==='approved').filter(b=>dc==='all'||b.cat===dc||(cById(b.cat)&&cById(b.cat).parent_id===dc)).filter(b=>!dd||b.district===dd).filter(b=>!dtn||b.town===dtn).filter(b=>!S.doff||b.off).sort((a,b)=>(b.feat?1:0)-(a.feat?1:0));
  const mine=S.dir.filter(b=>b.who==='me'&&b.status!=='approved');
  return {t:T('m_dir'),b:`<p class="mut" style="margin-bottom:10px">${T('dir_sub')}</p>${bannerHtml('directory')}
- <div class="chips"><button class="chip ${dc==='all'?'on':''}" data-act="dcat" data-id="all">${T('all')}</button><button class="chip ${S.doff?'on':''}" data-act="doff">${ic('gift','s')}${T('discounts')}</button>${top.map(c=>`<button class="chip ${dc===c.id?'on':''}" data-act="dcat" data-id="${c.id}">${esc(c.name)}</button>`).join('')}</div>
- <select id="dd" data-act-change="ddist" style="margin:10px 0" aria-label="${esc(T('su_district'))}"><option value="">${T('filter_area')}</option>${opts(gKids(null,'district'),dd,gOpt,r=>r.id)}</select>${dd?`<select id="dt" style="margin-bottom:10px" aria-label="${esc(T('su_town'))}"><option value="">${T('all_towns')}</option>${opts(gKids(dd,'town'),dtn,gOpt,r=>r.id)}</select>`:''}
+ ${S.dshow?`<button class="btn soft" style="align-self:flex-start;margin-bottom:10px" data-act="dback">${ic('left','s')}${T('ic_back')}</button>`:`<div class="grid2">${catTile('dcat','all',T('see_all'),S.dir.filter(b=>b.status==='approved').length,'list')}${catTile('doff','x',T('discounts'),S.dir.filter(b=>b.status==='approved'&&b.off).length,'gift')}${top.map(c=>catTile('dcat',c.id,c.name,S.dir.filter(b=>b.status==='approved'&&(b.cat===c.id||(cById(b.cat)&&cById(b.cat).parent_id===c.id))).length,'bag')).join('')}</div>`}
+ ${S.dshow?`<select id="dd" data-act-change="ddist" style="margin:10px 0" aria-label="${esc(T('su_district'))}"><option value="">${T('filter_area')}</option>${opts(gKids(null,'district'),dd,gOpt,r=>r.id)}</select>${dd?`<select id="dt" style="margin-bottom:10px" aria-label="${esc(T('su_town'))}"><option value="">${T('all_towns')}</option>${opts(gKids(dd,'town'),dtn,gOpt,r=>r.id)}</select>`:''}`:''}
  ${mine.length?`<div class="stack" style="margin-bottom:12px">${mine.map(dcard).join('')}</div>`:''}
- <div class="stack">${ls.length?ls.map(dcard).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_dir')}</p></div>`}</div>`};
+ ${S.dshow?`<div class="stack">${ls.length?ls.map(dcard).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_dir')}</p></div>`}</div>`:''}`};
 };
 document.addEventListener('change',e=>{if(e.target.id==='dd'){S.ddist=e.target.value;S.dtown='';renderOv(true)}if(e.target.id==='dt'){S.dtown=e.target.value;renderOv(true)}});
-ACT.doff=()=>{S.doff=!S.doff;renderOv(true)};
+ACT.doff=()=>{S.doff=true;S.dshow=true;renderOv(true)};
 function dcard(b){return `<button class="listrow" data-act="push" data-v="dir" data-id="${b.id}"><span class="th">${b.img?`<img class="art" src="${esc(b.img)}" alt="">`:art('tools',hueOf(b.id),0,'')}</span><span class="grow"><b>${esc(b.n)}</b><span class="xs mut">${esc(b.catName)} · ${esc(b.area)}</span></span>${b.feat?`<span class="pill">${ic('star','s')}${T('featured')}</span>`:''}${b.status!=='approved'?`<span class="pill red">${T('dir_pending')}</span>`:((recN(b.id)?`<span class="pill">${ic('heart','s')}${recN(b.id)}</span>`:'')+(b.ver?`<span class="pill">${ic('vcheck','s')}</span>`:''))}</button>`}
 V.dir=function(o){
  const b=S.dir.find(x=>x.id===o.id);if(!b)return {t:T('m_dir'),b:''};
@@ -632,7 +645,8 @@ V.dir=function(o){
  ${recBlock(b)}
  ${b.who!=='me'?`<div class="row"><button class="btn grow" data-act="msg" data-to="${esc(b.n)}" data-uid="${b.who}" data-about="${esc(b.n)}">${ic('msg','s')}${T('msg_biz')}</button></div><button class="btn line block" data-act="report" data-kind="biz" data-id="${b.id}">${ic('flag','s')}${T('report_biz')}</button>`:''}</div>`};
 };
-ACT.dcat=d=>{S.dcat=d.id;renderOv(true)};
+ACT.dcat=d=>{S.dcat=d.id;S.dshow=true;renderOv(true)};
+ACT.dback=()=>{S.dshow=false;S.dcat='all';S.doff=false;S.ddist='';S.dtown='';renderOv(true)};
 
 /* ---------- meetups (events) ---------- */
 V.events=function(){
@@ -786,7 +800,6 @@ ACT.fav=async d=>{
  const r=was?await sb.from('favourites').delete().eq('member',S.uid).eq('kind',d.k).eq('ref',d.id):await sb.from('favourites').insert({member:S.uid,kind:d.k,ref:d.id});
  if(r.error){if(was)S.favs.add(key);else S.favs.delete(key);renderMain();renderOv(true);toast(r.error.message)}
 };
-ACT.mlook=()=>{S.mlook=!S.mlook;renderMain()};
 function recBlock(b){
  if(b.status!=='approved'||b.who==='me')return recN(b.id)?`<div class="sm mut">${F('rec_n',{n:recN(b.id)})}</div>`:'';
  const o=DB.recs[b.id]||{n:0,mine:false};
