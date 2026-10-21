@@ -1,0 +1,5 @@
+-- Applied live in pieces (025a..025f): marketplace rules and safety.
+-- app_settings: market_wait_days(7), market_new_cap(2), market_new_cap_days(30), listing_review_first(0)
+-- listings: status 'held', hold_reason, views; trigger listing_guard (wait + cap + scam words + review-first)
+-- reports: trigger report_hold (second member's report holds a listing); bump_listing_view(); blocks table + msg_insert blocks
+-- people view exposes joined_at; public_config exposes the marketplace rule

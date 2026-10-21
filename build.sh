@@ -4,7 +4,7 @@ cd "$(dirname "$0")"
 mkdir -p dist
 KEY="${SB_ANON_KEY:-$(cat .private/anon.txt 2>/dev/null)}"
 [ -z "$KEY" ] && echo "missing SB_ANON_KEY or .private/anon.txt" && exit 1
-{ cat part1.html; echo '<script>'; cat vendor/supabase.js; echo '</script><script>'; cat scenes.js part2.js part3.js; sed "s|__ANON_KEY__|$KEY|" part4.js; [ -f part5.js ] && cat part5.js; echo '</script>'; } > dist/build.html
+{ cat part1.html; echo '<script>'; cat vendor/supabase.js; echo '</script><script>'; cat scenes.js part2.js part3.js; sed "s|__ANON_KEY__|$KEY|" part4.js; [ -f part5.js ] && cat part5.js; [ -f part6.js ] && cat part6.js; echo '</script>'; } > dist/build.html
 python3 - <<'PY'
 b=open('dist/build.html',encoding='utf8').read()
 head='''<!doctype html>
