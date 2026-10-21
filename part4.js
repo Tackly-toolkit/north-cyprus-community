@@ -175,7 +175,7 @@ function listSel(id,label,kind,v){
 /* ---------- people cache ---------- */
 function mkPerson(r){
  const n=r.display_name||'Member',biz=r.account_type==='business';
- return {n,i:(n[0]||'?').toUpperCase(),h:hueOf(r.id),area:areaLabel(r.district_id,r.town_id,r.area_id),biz:biz?1:0,img:r.photo_url||''};
+ return {n,i:(n[0]||'?').toUpperCase(),h:hueOf(r.id),area:areaLabel(r.district_id,r.town_id,r.area_id),biz:biz?1:0,img:r.photo_url||'',joined:r.joined_at||''};
 }
 function whoKey(id){return id===S.uid?'me':id}
 async function loadPeople(ids){
@@ -217,7 +217,7 @@ function mapPost(r){
 }
 function mapListing(r){
  const sub=cById(r.category_id),top=sub&&sub.parent_id?cById(sub.parent_id):sub;
- return {id:r.id,t:r.title,d:r.description,price:Number(r.price),cur:r.currency,cat:r.category_id,catTop:top?top.id:'',catName:sub?(top&&sub.parent_id?top.name+' · '+sub.name:sub.name):'',
+ return {id:r.id,views:r.views||0,status:r.status,t:r.title,d:r.description,price:Number(r.price),cur:r.currency,cat:r.category_id,catTop:top?top.id:'',catName:sub?(top&&sub.parent_id?top.name+' · '+sub.name:sub.name):'',
   who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,per:r.period,beds:r.bedrooms,furn:r.furnished,intent:r.intent||'offer',ptype:r.property_type,baths:r.bathrooms,prop:/^market-(rent|sale)/.test(r.category_id||''),imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,at:r.created_at,status:r.status,ic:'tag'};
 }
 function mapDir(r){
@@ -281,6 +281,7 @@ async function sync(opts){
  }
  S.role=!S.prof?'visitor':(S.prof.account_type==='business'?'business':'individual');
  S.admin=!!(S.prof&&S.prof.role==='admin');
+ if(S.uid){S.mfa=S.admin?await mfaState():null;if(await mfaGate()){setMe();render();return}}
 
  setMe();S.sup=[];S.supUnread=0;updateBubble();supLoad();
  const st=S.acct?S.acct.state:'active';
@@ -421,7 +422,7 @@ V.signup=function(){
   ${[['sc1t','sc1d','home'],['sc2t','sc2d','bag'],['sc3t','sc3d','vcheck']].map(c=>`<div class="sc"><span class="lf">${ic(c[2])}</span><div><b>${T(c[0])}</b><div class="sm mut">${T(c[1])}</div></div></div>`).join('')}
   <button class="btn block" data-act="sunext">${T('cont')}</button></div>`};
  if(u.step===2)return {t:T('join_free'),b:`<div class="stack"><span class="pill">${ic(biz?'bag':'user','s')}${T(biz?'su_biz':'su_ind')}</span>
-  <div class="card"><label class="f" for="su-n">${T('su_name')}</label><input id="su-n" value="${esc(u.name||'')}" maxlength="40" autocomplete="name">
+  <div class="card"><input id="su-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"><label class="f" for="su-n">${T('su_name')}</label><input id="su-n" value="${esc(u.name||'')}" maxlength="40" autocomplete="name">
   ${biz?`<label class="f" for="su-b">${T('su_biz_name')}</label><input id="su-b" value="${esc(u.biz||'')}" maxlength="60">${catSel('su-b2','directory',{c:u.cat}).replace(/id="su-b2-c"/,'id="su-bc"').replace(/data-cat="su-b2"/,'data-cat="su-b2"')}<label class="f" for="su-ba">${T('su_addr')}</label><input id="su-ba" value="${esc(u.addr||'')}" maxlength="120">`:''}
   ${geoSel('sg',{d:u.d,t:u.t,a:u.a})}</div>
   <div class="card"><label class="f" for="su-e">${T('su_email')}</label><input id="su-e" type="email" inputmode="email" autocomplete="email" value="${esc(u.email||'')}"><label class="f" for="su-p">${T('pw')}</label><input id="su-p" type="password" autocomplete="new-password" value="${esc(u.pw||'')}">
@@ -438,6 +439,7 @@ ACT.sunext=async function(){
  if(u.step===1){u.step=2;renderOv(false);$('#ov').scrollTop=0;return}
  if(u.step!==2)return;
  grabSu();
+ if(($('#su-hp')||{}).value){u.busy=false;renderOv(true);return}
  const biz=u.type==='biz';
  const ok=u.name&&u.email&&u.pw&&u.pw.length>=8&&u.d&&u.t&&u.agree&&(!biz||(u.biz&&u.cat));
  if(!ok){u.err=T('su_err');renderOv(true);return}
@@ -592,7 +594,7 @@ ACT.mback=()=>{S.mshow=false;S.mcat='all';S.mlook=false;renderMain();window.scro
 function marketV(){
  const top=cTop('market'),cur=S.mcat==='all'||!top.some(c=>c.id===S.mcat)?'all':S.mcat;
  const head=`<div class="row"><h1 class="h1 grow">${T('mk_title')}</h1><button class="btn out" data-act="create" data-type="listing">${ic('plus','s')}${T('sell')}</button></div>`;
- const note=`<div class="note g">${ic('info')}<div class="sm">${T('mk_note')}</div></div>`;
+ const note=`${safeNote()}`;
  if(!S.mshow){
   const cnt=id=>S.listings.filter(l=>l.catTop===id).length;
   return `<div class="stack">${notes()}${head}${bannerHtml('market')}<div class="grid2">${catTile('mcat','all',T('see_all'),S.listings.length,'list')}${catTile('mlook','x',T('looking_for'),S.listings.filter(l=>l.intent==='looking').length,'search')}${top.map(c=>catTile('mcat',c.id,c.name,cnt(c.id),'tag')).join('')}</div>${note}</div>`;
@@ -615,7 +617,7 @@ V.listing=function(o){
  ${mine?`<div class="row"><button class="btn soft grow" data-act="sold" data-id="${l.id}">${ic('check','s')}${T('mark_sold')}</button><button class="btn line grow" data-act="dellisting" data-id="${l.id}">${ic('trash','s')}${T('delete')}</button></div>`:`<button class="btn block" data-act="msg" data-to="${esc(w.n)}" data-uid="${l.who}" data-about="${esc(l.t)}">${ic('msg','s')}${T('msg_seller')}</button>
  <div class="row"><button class="btn line grow" data-act="report" data-kind="seller" data-id="${l.who}">${ic('flag','s')}${T('report_seller')}</button><button class="btn line grow" data-act="report" data-kind="listing" data-id="${l.id}">${ic('flag','s')}${T('report_listing')}</button></div>`}
  ${S.admin&&!mine?`<button class="btn line block" data-act="dellisting" data-id="${l.id}">${ic('trash','s')}${T('delete')} (admin)</button>`:''}
- <div class="note g">${ic('info')}<div class="sm">${T('mk_note')}</div></div></div>`};
+ ${safeNote()}</div>`};
 };
 ACT.sold=async d=>{await sb.from('listings').update({status:'sold'}).eq('id',d.id);S.listings=S.listings.filter(l=>l.id!==d.id);popall();render();toast(T('deleted'))};
 ACT.dellisting=async d=>{const {error}=await sb.from('listings').delete().eq('id',d.id);if(error)return toast(error.message);S.listings=S.listings.filter(l=>l.id!==d.id);popall();render();toast(T('deleted'))};
@@ -914,7 +916,8 @@ ACT.crpub=async function(){
    const ti=val('c-t'),de=val('c-d'),g=geoVals('lg'),cat=$('#c-m-c').value,sub=($('#c-m-s')||{}).value||'';
    if(!ti||!de||!cat||!g.d){toast(T('cr_need'));throw 0}
    const catId=cat==='__other'?null:(sub||cat);
-   const {error}=await sb.from('listings').insert({author:S.uid,intent:val('c-int')||'offer',title:ti,description:de,price:+val('c-p')||0,currency:val('c-cur')||'TRY',category_id:catId,...(/^market-(rent|sale)$/.test(cat)?{condition:null,handover:null,property_type:/^Not applicable/.test(val('c-pt'))?null:(val('c-pt')||null),bathrooms:/^Not applicable/.test(val('c-bath'))?null:(val('c-bath')||null),bedrooms:/^Not applicable/.test(val('c-beds'))?null:val('c-beds'),furnished:/^Not applicable/.test(val('c-furn'))?null:val('c-furn'),period:cat==='market-rent'?'month':null}:{condition:val('c-cond'),handover:val('c-hand')}),district_id:g.d,town_id:g.t==='__other'?null:(g.t||null),area_id:g.a==='__other'?null:(g.a||null),photos:urls});if(error)throw error;
+   const {data:ins,error}=await sb.from('listings').insert({author:S.uid,intent:val('c-int')||'offer',title:ti,description:de,price:+val('c-p')||0,currency:val('c-cur')||'TRY',category_id:catId,...(/^market-(rent|sale)$/.test(cat)?{condition:null,handover:null,property_type:/^Not applicable/.test(val('c-pt'))?null:(val('c-pt')||null),bathrooms:/^Not applicable/.test(val('c-bath'))?null:(val('c-bath')||null),bedrooms:/^Not applicable/.test(val('c-beds'))?null:val('c-beds'),furnished:/^Not applicable/.test(val('c-furn'))?null:val('c-furn'),period:cat==='market-rent'?'month':null}:{condition:val('c-cond'),handover:val('c-hand')}),district_id:g.d,town_id:g.t==='__other'?null:(g.t||null),area_id:g.a==='__other'?null:(g.a||null),photos:urls}).select('status').single();if(error)throw error;
+   S.cr.held=ins&&ins.status==='held';
    if(cat==='__other')await otherReq('market_category',val('c-m-co'));
    if(g.t==='__other')await otherReq('town',g.to);if(g.a==='__other')await otherReq('area',g.ao);
    S.tab='market';
@@ -925,8 +928,8 @@ ACT.crpub=async function(){
    if(g.t==='__other')await otherReq('town',g.to);if(g.a==='__other')await otherReq('area',g.ao);
    S.tab='explore';
   }
-  const keepClub=s.club;closeSheet();S.stack=keepClub?S.stack:[];await loadContent();render();window.scrollTo(0,0);toast(T('cr_done'));
- }catch(e){if(e)toast(e.message||'Error')}
+  const keepClub=s.club;closeSheet();S.stack=keepClub?S.stack:[];await loadContent();render();window.scrollTo(0,0);toast(S.cr.held?T('cr_held'):T('cr_done'));S.cr.held=false;
+ }catch(e){if(e)crErr(e)}
  S.cr.busy=false;if(btn)btn.disabled=false;
 };
 
@@ -992,10 +995,10 @@ function policyText(id){
  const contact=['the chat bubble in the app',c.email].filter(Boolean).join(' or email ');
  const X={
  about:[['Welcome',`${SITE_NAME} is a friendly, small community for friends and neighbours connected to North Cyprus, wherever in the world they are. Think of it as a small private group: ask questions, share tips, meet people, buy, sell or rent from each other, and find local businesses.`],['Good to know',`It is run by two private individuals, not a company, agent, bank or government body. It is a small circle for people from any country who are part of the North Cyprus community. The administrators decide who joins and may close an account that does not fit.`]],
- terms:[['House rules',`Be kind and honest. No hate, harassment, scams, adult content or anything illegal. Do not share other people's private details. You are responsible for what you post, and the administrators can edit, hide or remove anything and close any account. Use the flag button to report anything that worries you.`],['Feed and friends',`The feed shows only what members post on their own profile, as a photo and a few words. You choose who sees each post: everyone, members, or friends only. Friends are by request and acceptance. There is no following.`],['Marketplace',`Sell or give away small items, and list property to rent or for sale. Prices are in TL or GBP. No cars and no services. Listings last 30 days and use photos. Deals are agreed directly between members, in person, in cash or however you agree. The platform never takes payment or guarantees any sale, so check everything before you pay.`],['Guides and advice',`Guides and posts come from the community. They are not legal, tax, medical or financial advice. Check with official sources and professionals.`],['Businesses',`Directory listings are agreed with the administrators, shown as unverified until confirmed, and may be removed at any time.`]],
+ terms:[['House rules',`Be kind and honest. No hate, harassment, scams, adult content or anything illegal. Do not share other people's private details. You are responsible for what you post, and the administrators can edit, hide or remove anything and close any account. Use the flag button to report anything that worries you.`],['Feed and friends',`The feed shows only what members post on their own profile, as a photo and a few words. You choose who sees each post: everyone, members, or friends only. Friends are by request and acceptance. There is no following.`],['Marketplace',`Sell or give away small items, and list property to rent or for sale. Prices are in TL or GBP. No cars and no services. Listings last 30 days and use photos. Deals are agreed directly between members, in person, in cash or however you agree. The platform never takes payment or guarantees any sale, so check everything before you pay.`],['Marketplace safety rules',`To keep the marketplace for real members, a new member can start posting listings after their account is 7 days old, and may have only a small number of active listings during their first weeks. Listings that look like scams are held for a person to check before they appear, and a listing reported by two different members is held in the same way. You can report, mute or block any member. Never pay anyone in advance for something you have not seen.`],['Guides and advice',`Guides and posts come from the community. They are not legal, tax, medical or financial advice. Check with official sources and professionals.`],['Businesses',`Directory listings are agreed with the administrators, shown as unverified until confirmed, and may be removed at any time.`]],
  payment:[['Free to join and enjoy',`Joining ${SITE_NAME} is free, and there is nothing to pay at the moment. Everything in the app is free to use.`],['Why a fee may come later',`The aim is to bring every tourist, would-be tourist and expat together in one friendly place. Running it has real costs. To keep it going, we may introduce a small monthly member fee in future. If we do, we will tell every member clearly and well in advance, explain the amount and how to pay, and you will be free to stay or to leave. Nothing changes until then.`],['Invitation only',`Sign-up is open for now. The administrators may make it invitation only at any time. Existing members are not affected.`],['No card details',`We never ask for card details in the app.`]],
  privacy:[['What we keep',`Your name, email, area, account type, and the posts, photos, listings, friends and messages you create, plus the date you joined. Passwords are stored scrambled.`],['Who sees what',`Public posts can be seen by guests who are not signed in. Members-only posts, friends-only posts, messages and the marketplace are for signed-in members. Your email is never shown to other members. Administrators can see account details to run the community.`],['Where it lives',`In a secure cloud database in the European Union (Frankfurt). We send sign-in and account emails through an email service. We never sell your data and use no third-party tracking.`],['Your choices',`Edit your name, area and photo any time. To have your account and content deleted, contact ${contact}.`],['Note',`This is a plain-language summary and should be reviewed by a qualified adviser before launch.`]],
- contact:[['Contact',`Message us through ${contact}.`],['In an emergency',`Call the emergency numbers in the SOS button. This community cannot send help.`]]
+ contact:[['Contact',`Message us through ${contact}.`],['How fast we reply',`We aim to reply within one working day.`],['In an emergency',`Call the emergency numbers in the SOS button. This community cannot send help.`]]
  };
  return X[id]||[];
 }
