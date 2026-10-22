@@ -39,8 +39,8 @@ N({
  views_n:["Viewed {n} times","{n} kez görüntülendi","Wyświetlono {n} razy","Просмотров: {n}"],
  out_all:["Sign out on all devices","Tüm cihazlarda çıkış yap","Wyloguj na wszystkich urządzeniach","Выйти на всех устройствах"],
  held_t:["Held for review","İncelemede","Wstrzymane do sprawdzenia","Ожидает проверки"],
- mfa_t:["Two-step login (admins)","İki adımlı giriş (yöneticiler)","Logowanie dwuetapowe (administratorzy)","Двухэтапный вход (администраторы)"],
- mfa_d:["Adds a 6-digit code from an authenticator app when you sign in. Strongly recommended for admin accounts.","Giriş yaparken bir doğrulayıcı uygulamadan 6 haneli kod ekler. Yönetici hesapları için önerilir.","Dodaje 6-cyfrowy kod z aplikacji uwierzytelniającej podczas logowania. Zalecane dla kont administratorów.","Добавляет 6-значный код из приложения-аутентификатора при входе. Рекомендуется для администраторов."]
+ mfa_t:["Admin PIN by email","İki adımlı giriş (yöneticiler)","Logowanie dwuetapowe (administratorzy)","Двухэтапный вход (администраторы)"],
+ mfa_d:["A 6-digit PIN is emailed to you each time you sign in to the admin area. Admin powers stay locked until you enter it.","Giriş yaparken bir doğrulayıcı uygulamadan 6 haneli kod ekler. Yönetici hesapları için önerilir.","Dodaje 6-cyfrowy kod z aplikacji uwierzytelniającej podczas logowania. Zalecane dla kont administratorów.","Добавляет 6-значный код из приложения-аутентификатора при входе. Рекомендуется для администраторов."]
 });
 
 /* ---------- marketplace waiting rule ---------- */
@@ -170,7 +170,7 @@ S._vw={};
 /* ---------- me: sign out everywhere, admin two-step login ---------- */
 ACT.signoutall=async()=>{await sb.auth.signOut({scope:'global'});S.stack=[];S.sheet=null;S.tab='feed';await sync()};
 async function mfaState(){
- try{const {data}=await sb.auth.mfa.listFactors();const f=(data&&data.totp||[]).find(x=>x.status==='verified');return f||null}catch(e){return null}
+ try{const r=await sb.rpc('admin_pin_status');return r.data===true?{ok:true}:null}catch(e){return null}
 }
 S.mfa=null;
 {
@@ -179,44 +179,30 @@ S.mfa=null;
   let h=_me();
   if(!isM())return h;
   let extra=`<button class="btn line block" data-act="signoutall">${ic('lock','s')}${T('out_all')}</button>`;
-  if(S.admin)extra=`<div class="card stack"><div class="row"><span class="lf" style="background:var(--rs);color:var(--r);width:40px;height:40px">${ic('shield')}</span><div class="grow"><b>${T('mfa_t')}</b></div>${S.mfa?`<span class="pill">${ic('check','s')}On</span>`:''}</div><div class="sm mut">${T('mfa_d')}</div>${S.mfa?`<button class="btn line block" data-act="mfaoff">Turn off</button>`:`<button class="btn block" data-act="mfaon">Set up two-step login</button>`}</div>`+extra;
+  if(S.admin)extra=`<div class="card stack"><div class="row"><span class="lf" style="background:var(--rs);color:var(--r);width:40px;height:40px">${ic('shield')}</span><div class="grow"><b>${T('mfa_t')}</b></div>${S.mfa?`<span class="pill">${ic('check','s')}On</span>`:''}</div><div class="sm mut">${T('mfa_d')}</div>${S.mfa?'':`<button class="btn block" data-act="pinopen">Send me a PIN</button>`}</div>`+extra;
   return h.replace(/<button class="btn line block" data-act="signout">/,extra+'<button class="btn line block" data-act="signout">');
  };
  if(S.admin===undefined)S.admin=false;
 }
-SH.mfa=s=>{
- if(s.stage==='login')return `<h2 class="h2">Two-step login</h2><p class="mut" style="margin:6px 0 12px">Enter the 6-digit code from your authenticator app.</p><input id="mfa-c" inputmode="numeric" maxlength="6" autocomplete="one-time-code" style="font-size:22px;letter-spacing:6px;text-align:center">${s.err?`<p class="xs" style="color:var(--r);margin-top:8px">${esc(s.err)}</p>`:''}<button class="btn block" style="margin-top:12px" data-act="mfalogin">Continue</button>`;
- return `<h2 class="h2">Set up two-step login</h2><ol class="sm" style="margin:8px 0 12px;padding-left:18px"><li>Open an authenticator app (Google Authenticator, Microsoft Authenticator, 1Password, Authy).</li><li>Scan this code, or type the key.</li><li>Enter the 6-digit code it shows.</li></ol><div style="text-align:center"><img src="${esc(s.qr)}" alt="" style="width:180px;height:180px;background:#fff;border-radius:12px;padding:6px"></div><p class="xs mut" style="text-align:center;overflow-wrap:anywhere;margin:8px 0">${esc(s.secret)}</p><input id="mfa-c" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456" style="font-size:22px;letter-spacing:6px;text-align:center">${s.err?`<p class="xs" style="color:var(--r);margin-top:8px">${esc(s.err)}</p>`:''}<button class="btn block" style="margin-top:12px" data-act="mfaverify">Turn on</button>`;
-};
-ACT.mfaon=async()=>{
- const {data,error}=await sb.auth.mfa.enroll({factorType:'totp',friendlyName:'Admin '+Date.now()});
- if(error)return toast(error.message);
- openSheet({v:'mfa',stage:'enroll',id:data.id,qr:data.totp.qr_code,secret:data.totp.secret});
-};
-ACT.mfaverify=async()=>{
- const s=S.sheet,c=val('mfa-c');if(!c)return;
- const {error}=await sb.auth.mfa.challengeAndVerify({factorId:s.id,code:c.replace(/\s/g,'')});
- if(error){s.err='That code did not match. Try the newest one.';return renderSheet()}
- S.mfa=await mfaState();closeSheet();toast('Two-step login is on');renderMain();
-};
-ACT.mfaoff=async()=>{
- const f=await mfaState();if(!f)return;
- const {error}=await sb.auth.mfa.unenroll({factorId:f.id});
- if(error)return toast(error.message);
- S.mfa=null;toast('Two-step login is off');renderMain();
-};
+SH.mfa=s=>`<h2 class="h2">Admin PIN</h2><p class="mut" style="margin:6px 0 12px">We emailed a 6-digit PIN to your login email${s.em?' ('+esc(s.em)+')':''}. Enter it to open the admin area. It works once and lasts 10 minutes.</p><input id="mfa-c" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="123456" style="font-size:22px;letter-spacing:6px;text-align:center">${s.err?`<p class="xs" style="color:var(--r);margin-top:8px">${esc(s.err)}</p>`:''}<button class="btn block" style="margin-top:12px" data-act="mfalogin">Continue</button><button class="btn line block" style="margin-top:8px" data-act="pinresend">Send a new PIN</button>`;
+async function pinSend(){
+ const r=await sb.rpc('admin_pin_send');return r.data;
+}
+ACT.pinopen=async()=>{await pinSend();openSheet({v:'mfa',em:(S.prof&&S.prof.email)||''})};
+ACT.pinresend=async()=>{const r=await pinSend();toast(r==='sent'?'A new PIN is on its way':r==='wait'?'Please wait 30 seconds before asking again':'Could not send a PIN');};
 ACT.mfalogin=async()=>{
  const c=val('mfa-c');if(!c)return;
- const f=await mfaState();if(!f){closeSheet();return}
- const {error}=await sb.auth.mfa.challengeAndVerify({factorId:f.id,code:c.replace(/\s/g,'')});
- if(error){S.sheet.err='That code did not match. Try the newest one.';return renderSheet()}
+ const r=await sb.rpc('admin_pin_check',{c});
+ if(r.data!==true){S.sheet.err='That PIN did not match or has expired. Tap Send a new PIN.';return renderSheet()}
  closeSheet();S.mfaOk=true;await sync();
 };
 /* ask for the code when an account with two-step login is only half signed in */
 async function mfaGate(){
  try{
-  const {data}=await sb.auth.mfa.getAuthenticatorAssuranceLevel();
-  if(data&&data.nextLevel==='aal2'&&data.currentLevel!=='aal2'){openSheet({v:'mfa',stage:'login'});return true}
+  if(!S.admin)return false;
+  if(S.sheet&&S.sheet.v==='mfa')return true;
+  if(S.mfa)return false;
+  await pinSend();openSheet({v:'mfa'});return true;
  }catch(e){}
  return false;
 }
