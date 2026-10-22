@@ -1,0 +1,3 @@
+-- Admin PIN by email: tables, send/check/status functions, and is_admin() requiring a verified session.
+-- Applied to the project as 031_admin_pin_tables, 032_admin_pin_functions, 033_is_admin_requires_pin.
+-- is_admin() = admin profile, not suspended, and a row in admin_pin_ok for this auth session within 24 hours.
