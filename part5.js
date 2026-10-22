@@ -34,6 +34,12 @@ async function admLoad(sec,x){
   const [po,li,me,di,pr]=await Promise.all([ids('posts','id,body',['post']),ids('listings','id,title',['listing']),ids('meetups','id,title',['event']),ids('directory','id,name',['biz']),ids('profiles','id,display_name',['seller'])]);
   const prev={};po.forEach(r=>prev[r.id]=r.body.slice(0,120));li.forEach(r=>prev[r.id]=r.title);me.forEach(r=>prev[r.id]=r.title);di.forEach(r=>prev[r.id]=r.name);pr.forEach(r=>prev[r.id]=r.display_name);
   const mids=by('message');if(mids.length){const ms=await aok(sb.from('messages').select('id,body,from_id').in('id',mids));ms.forEach(m=>prev[m.id]='"'+m.body.slice(0,160)+'"')}
+  const who={};
+  const own=async(t,col,k)=>{const ids=by(k);if(!ids.length)return;(await aok(sb.from(t).select('id,'+col).in('id',ids))).forEach(r=>who[r.id]=r[col])};
+  await Promise.all([own('posts','author','post'),own('listings','author','listing'),own('meetups','author','event'),own('directory','owner','biz')]);
+  by('seller').forEach(i=>who[i]=i);
+  if(mids.length){(await aok(sb.from('messages').select('id,from_id').in('id',mids))).forEach(m=>who[m.id]=m.from_id)}
+  ADM.rwho=who;
   ADM.held=await aok(sb.from('listings').select('id,title,description,author,hold_reason,created_at').eq('status','held').order('created_at',{ascending:false}));await loadPeople((ADM.held||[]).map(r=>r.author));
   ADM.reports=rows;ADM.prev=prev;await loadPeople(rows.map(r=>r.reporter));
  }
@@ -130,8 +136,9 @@ V.adm_member=function(o){
  <div class="sm mut">Joined ${aDate(m.joined_at)} · Free until ${aDate(m.free_until)}${m.paid_until?' · Paid until '+aDate(m.paid_until):''}</div>
  ${live()?`<div class="sm"><b>Next due: ${aDate(m.due_on)}</b>`:`<div class="sm"><b>Free member</b> · charging is off. If you switch it on, their next due date would be ${aDate(m.paid_until||m.free_until)}`}${live()&&m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
  ${bill()?`<div class="card stack"><b>Record a payment</b><div class="grid2" style="gap:10px"><div><label class="f" for="a-amt">Amount (TL)</label><input id="a-amt" type="number" inputmode="decimal" value="${esc(fee)}"></div><div><label class="f" for="a-mo">Months</label><select id="a-mo">${[1,2,3,6,12].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div><label class="f" for="a-nt">Note (optional)</label><input id="a-nt" maxlength="120" placeholder="e.g. cash, 14 Oct">${aBtn('apay',`${ic('check','s')}Record payment and open account`,`data-id="${m.id}"`,'')}</div>`:''}
+ <div class="card stack"><b>Send a warning</b><div class="xs mut">Appears in their chat with the administrators and they get an alert. It is logged in the activity log.</div><textarea id="a-warn" maxlength="400" style="min-height:70px" placeholder="e.g. Please keep to the house rules. Listings that ask for money in advance are not allowed."></textarea>${aBtn('awarn','Send warning',`data-id="${m.id}"`)}</div>
  <div class="card stack"><b>Account control</b>
- <div class="row" style="flex-wrap:wrap">${aBtn('alock',m.manual_lock?'Remove manual lock':'Lock account now',`data-id="${m.id}" data-v="${m.manual_lock?0:1}"`)}${aBtn('asusp',m.suspended?'Reinstate':'Suspend',`data-id="${m.id}" data-v="${m.suspended?0:1}"`,m.suspended?'soft':'line')}</div>
+ <div class="row" style="flex-wrap:wrap">${aBtn('alock',m.manual_lock?'Remove manual lock':'Lock account now',`data-id="${m.id}" data-v="${m.manual_lock?0:1}"`)}${aBtn('asusp',m.suspended?'Reinstate':'Suspend (ban)',`data-id="${m.id}" data-v="${m.suspended?0:1}"`,m.suspended?'soft':'line')}</div>
  <div class="row" style="flex-wrap:wrap">${aBtn('aext','+30 free days',`data-id="${m.id}"`)}${aBtn('aadmin',m.role==='admin'?'Remove admin':'Make admin',`data-id="${m.id}" data-v="${m.role==='admin'?'member':'admin'}"`,'line')}</div>
  <label class="f" for="a-note">Private note</label><textarea id="a-note" maxlength="500" style="min-height:70px">${esc(m.admin_note||'')}</textarea>${aBtn('anote','Save note',`data-id="${m.id}"`)}
  ${aBtn('adel',S.adelc===m.id?'Tap again to delete for good':'Delete account and all content',`data-id="${m.id}"`,'line')}</div>
@@ -143,6 +150,7 @@ ACT.apay=async d=>{
  toast('Payment recorded');await admReload();
 };
 ACT.alock=async d=>{await aok(sb.from('profiles').update({manual_lock:d.v==='1'}).eq('id',d.id));aLog(d.v==='1'?'lock':'unlock',{profile:d.id});toast('Saved');admReload()};
+ACT.awarn=async d=>{const b=val('a-warn');if(!b)return toast('Write the warning first');await aok(sb.from('support_messages').insert({member:d.id,from_admin:true,body:'Warning from the administrators: '+b}));aLog('warn_member',{profile:d.id});toast('Warning sent');admReload()};
 ACT.asusp=async d=>{await aok(sb.from('profiles').update({suspended:d.v==='1'}).eq('id',d.id));aLog(d.v==='1'?'suspend':'reinstate',{profile:d.id});toast('Saved');admReload()};
 ACT.aext=async d=>{const m=ADM.members.find(x=>x.id===d.id);const base=new Date(Math.max(Date.now(),new Date(m.free_until).getTime()));base.setDate(base.getDate()+30);await aok(sb.from('profiles').update({free_until:base.toISOString()}).eq('id',d.id));aLog('extend_free',{profile:d.id});toast('Free period extended');admReload()};
 ACT.aadmin=async d=>{await aok(sb.from('profiles').update({role:d.v}).eq('id',d.id));aLog('role',{profile:d.id,role:d.v});toast('Saved');admReload()};
@@ -291,7 +299,7 @@ V.adm_reports=function(){
  const HR={scam_words:'Looks like a scam (wording)',reports:'Reported by two members',review_first:'First listings are checked'};
  const held=(ADM.held||[]).length?`<div class="card stack" style="border:2px solid var(--r)"><b>Held for review (${ADM.held.length})</b><div class="xs mut">These are hidden from members until you restore them.</div>${ADM.held.map(l=>`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b style="overflow-wrap:anywhere">${esc(l.title)}</b><div class="xs mut">${esc((P[l.author]||{n:'Member'}).n)} · ${esc(HR[l.hold_reason]||l.hold_reason||'')}</div><div style="overflow-wrap:anywhere">${esc(l.description)}</div><div class="row" style="flex-wrap:wrap">${aBtn('arestore',`data-id="${l.id}"`,'Restore')}${aBtn('aheldrm',`data-id="${l.id}"`,'Remove')}</div></div>`).join('')}</div>`:'';
  return {t:'Reports',b:`<div class="stack">${held}${rs.length?rs.map(r=>`<div class="card stack" style="${r.status==='done'?'opacity:.55':''}"><div class="row"><b class="grow">${lab[r.kind]||esc(r.kind)} · ${esc(T(r.reason)||r.reason)}</b><span class="xs mut">${aDate(r.created_at)}</span></div><div class="sm" style="overflow-wrap:anywhere">${esc((ADM.prev||{})[r.target_id]||'(already removed)')}</div><div class="xs mut">Reported by ${esc((P[r.reporter]||{}).n||'member')}</div>
-  ${r.status==='open'?`<div class="row" style="flex-wrap:wrap">${r.kind==='seller'?aBtn('admgo',`data-sec="member" data-x="${r.target_id}"`,'Open member'):''}${['post','listing','event','biz'].includes(r.kind)&&(ADM.prev||{})[r.target_id]?aBtn('areprm',`data-id="${r.id}" data-kind="${r.kind}" data-t="${r.target_id}"`,'Remove content','line'):''}${aBtn('arepdone',`data-id="${r.id}"`,'Mark done')}</div>`:''}</div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No reports.</p></div>'}</div>`};
+  ${r.status==='open'?`<div class="row" style="flex-wrap:wrap">${(ADM.rwho||{})[r.target_id]?aBtn('admgo',`data-sec="member" data-x="${(ADM.rwho||{})[r.target_id]}"`,'Open member (warn or suspend)'):''}${['post','listing','event','biz'].includes(r.kind)&&(ADM.prev||{})[r.target_id]?aBtn('areprm',`data-id="${r.id}" data-kind="${r.kind}" data-t="${r.target_id}"`,'Remove content','line'):''}${aBtn('arepdone',`data-id="${r.id}"`,'Mark done')}</div>`:''}</div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No reports.</p></div>'}</div>`};
 };
 ACT.arestore=async d=>{await aok(sb.from('listings').update({status:'active',hold_reason:null}).eq('id',d.id));aLog('restore_listing',{id:d.id});toast('Restored');admReload()};
 ACT.aheldrm=async d=>{await aok(sb.from('listings').update({status:'removed'}).eq('id',d.id));aLog('remove_listing',{id:d.id});toast('Removed');admReload()};
