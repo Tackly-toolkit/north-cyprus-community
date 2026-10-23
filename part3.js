@@ -98,7 +98,7 @@ function post(p){
  const cms=S.cmt[k];
  const wa='https://wa.me/?text='+encodeURIComponent(A(p.txt).slice(0,120)+' — '+SITE_NAME+' '+itemUrl('post',p.id));
  return `<article class="card post"><div class="ph">${av(p.who)}<div style="min-width:0"><b>${esc(P0.n)}${P0.org||P0.biz?` <span class="pill" style="vertical-align:1px">${ic('vcheck','s')}${P0.org?T('staff'):T('verified')}</span>`:''}</b><small>${ago(p.m)} · ${ic(audI[p.aud],'s')} ${T(audK[p.aud])}${p.help?' · '+T('help_tag'):''}</small></div></div>
- <div class="txt">${esc(A(p.txt))}</div>${postMedia(p)}${p.ref?refCard(p.ref):''}
+ <div class="txt">${U(A(p.txt))}</div>${postMedia(p)}${p.ref?refCard(p.ref):''}
  <div class="acts">
   <button class="actb ${lk?'on':''}" data-act="like" data-id="${p.id}" title="${T('like')}">${ic('heart')}<span>${n}</span></button>
   <button class="actb" data-act="cmt" data-id="${p.id}" title="${T('comment')}">${ic('msg')}<span>${p.cm.length||T('comment')}</span></button>
@@ -106,7 +106,7 @@ function post(p){
   <a class="actb" href="${wa}" target="_blank" rel="noopener" title="${T('whatsapp')}">${ic('wa')}<span>${T('whatsapp')}</span></a>
   ${(p.who==='me'||S.admin)?`<button class="actb" data-act="delpost" data-id="${p.id}" title="${T('delete')}" aria-label="${T('delete')}">${ic('trash')}</button>`:''}<button class="actb" data-act="report" data-kind="post" data-id="${p.id}" title="${T('report')}">${ic('flag')}<span>${T('report')}</span></button>
  </div>
- ${cms?`<div class="cmts">${p.cm.map(c=>`<div class="cm">${av(c[0],30)}<div class="bub"><b>${esc(P[c[0]].n)}</b> ${esc(c[1])}</div></div>`).join('')}<div class="cform"><input id="ci-${p.id}" placeholder="${T('add_comment')}" maxlength="200"><button class="btn" data-act="cmtsend" data-id="${p.id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`:''}
+ ${cms?`<div class="cmts">${p.cm.map(c=>`<div class="cm">${av(c[0],30)}<div class="bub"><b>${esc(P[c[0]].n)}</b> ${U(c[1])}</div></div>`).join('')}<div class="cform"><input id="ci-${p.id}" placeholder="${T('add_comment')}" maxlength="200"><button class="btn" data-act="cmtsend" data-id="${p.id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`:''}
  </article>`;
 }
 
@@ -313,8 +313,16 @@ function become(type,name,area,biz,cat,dir){
  if(type==='biz'){S.role='business';if(dir&&!S.dir.some(b=>b.id==='mine'))S.dir.push({id:'mine',n:biz||P.me.n,cat:cat||'home',area:P.me.area,off:'free_consult',x:36,y:71,ver:0,k:''})}else S.role='individual';
 }
 function grabSu(){const u=S.su,g=id=>{const e=$('#'+id);return e?e.value.trim():undefined};const n=g('su-n');if(n!==undefined)u.name=n;const a=g('su-a');if(a!==undefined)u.area=a;const b=g('su-b');if(b!==undefined)u.biz=b;const c=g('su-c');if(c!==undefined)u.cat=c}
+const TX={};
+const _hk=s=>{let h=5381;for(let i=0;i<s.length;i++)h=((h<<5)+h+s.charCodeAt(i))|0;return 'k'+(h>>>0).toString(36)+s.length};
+const U=text=>{text=String(text==null?'':text);const k=_hk(text)+'_'+S.L,x=TX[k];(window.__txsrc=window.__txsrc||{})[k]=text;
+ if(!x||!x.on)return esc(text)+(text.trim().length>=3&&/\p{L}/u.test(text)&&!(x&&x.same)?` <button class="txb" data-act="tx" data-k="${k}" data-o="${esc(text.slice(0,0))}">${x&&x.busy?'…':T('tx_btn')}</button>`:'');
+ return esc(x.t)+` <button class="txb" data-act="tx" data-k="${k}">${T('tx_orig')}</button>`};
 const ACT={
 noop(){},
+async tx(d){const k=d.k;let x=TX[k];if(x&&x.t!=null){x.on=!x.on;render();return}
+  const src=window.__txsrc&&window.__txsrc[k];if(!src)return;TX[k]=x={on:false,busy:true};render();
+  try{const r=await sb.functions.invoke('translate',{body:{text:src,target:LANGS[S.L]}});const dd=r.data;if(dd&&dd.text){x.busy=false;if(dd.text.trim()===src.trim()||dd.src===LANGS[S.L]){x.same=true}else{x.t=dd.text;x.on=true}}else{x.busy=false;toast&&toast(T('tx_err'))}}catch(e){x.busy=false;try{toast(T('tx_err'))}catch(_){}}render()},
 tab(d){S.tab=d.id;S.stack=[];clearClip();renderOv();renderMain();renderTop();renderNav();window.scrollTo(0,0)},
 push(d){push(d.v,{id:d.id})},pop,popall,
 bell(){push('notifs');if(isM()&&S.unread){S.unread=0;renderTop()}},
