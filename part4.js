@@ -16,6 +16,7 @@ Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
 
 /* ---------- translations for new text: [en, tr, pl, ru] ---------- */
 function N(o){Object.keys(o).forEach(k=>{D[k]=o[k]})}
+N({tx_btn:["Translate","Çevir","Przetłumacz","Перевести"],tx_orig:["Show original","Orijinali göster","Pokaż oryginał","Показать оригинал"],tx_err:["Could not translate. Try again.","Çevrilemedi. Tekrar deneyin.","Nie udało się przetłumaczyć. Spróbuj ponownie.","Не удалось перевести. Попробуйте ещё раз."]});
 /* no built-in sample content: only real member and admin content is ever shown */
 [EV,CLUBS,UPD,EQ,CLIPS,POSTS,LISTINGS,DIR].forEach(a=>{a.length=0});
 Object.assign(S,{posts:[],listings:[],clips:[],dir:[],meetups:[],streak:0,unread:0});
@@ -121,7 +122,7 @@ const gOpt=g=>g.names.length>1?g.names[0]+' ('+g.names.slice(1).join(' / ')+')':
 const gKids=(p,l)=>DB.geo.filter(g=>g.active!==false&&g.level===l&&(p===null||g.parent_id===p)).sort((a,b)=>(a.sort||0)-(b.sort||0)||a.names[0].localeCompare(b.names[0]));
 const areaLabel=(d,t,a)=>[a,t,d].filter(Boolean).map(gName).filter(Boolean).filter((x,i,arr)=>arr.indexOf(x)===i).join(', ');
 const cById=id=>DB.cats.find(c=>c.id===id);
-const cName=id=>{const c=cById(id);return c?c.name:''};
+const cName=id=>cLbl(cById(id));
 const cTop=kind=>DB.cats.filter(c=>c.kind===kind&&!c.parent_id&&c.active!==false).sort((a,b)=>(a.sort||0)-(b.sort||0));
 const cKids=pid=>DB.cats.filter(c=>c.parent_id===pid&&c.active!==false).sort((a,b)=>(a.sort||0)-(b.sort||0));
 const money=(n,cur)=>{const sym={'GBP £':'£','EUR €':'€','USD $':'$','TRY ₺':'₺','TL ₺':'₺','TL':'₺','TRY':'₺','GBP':'£','EUR':'€','USD':'$'}[cur||'TRY']||'';return sym+Number(n).toLocaleString(LOC[S.L])};
@@ -155,9 +156,9 @@ document.addEventListener('change',e=>{
 function catSel(pfx,kind,sel){
  sel=sel||{};
  const top=cTop(kind),kids=sel.c?cKids(sel.c):[];
- return `<label class="f" for="${pfx}-c">${T('cr_cat')}</label><select id="${pfx}-c" data-cat="${pfx}"><option value="">${T('choose')}</option>${opts(top,sel.c,c=>c.name,c=>c.id)}<option value="__other">${T('other_tell')}</option></select><input id="${pfx}-co" placeholder="${esc(T('other_ph'))}" maxlength="60" hidden style="margin-top:8px"><div id="${pfx}-sw">${kids.length?subSel(pfx,kids,sel.s):''}</div>`;
+ return `<label class="f" for="${pfx}-c">${T('cr_cat')}</label><select id="${pfx}-c" data-cat="${pfx}"><option value="">${T('choose')}</option>${opts(top,sel.c,cLbl,c=>c.id)}<option value="__other">${T('other_tell')}</option></select><input id="${pfx}-co" placeholder="${esc(T('other_ph'))}" maxlength="60" hidden style="margin-top:8px"><div id="${pfx}-sw">${kids.length?subSel(pfx,kids,sel.s):''}</div>`;
 }
-const subSel=(pfx,kids,v)=>`<label class="f" for="${pfx}-s">${T('cr_sub')}</label><select id="${pfx}-s"><option value="">${T('choose')}</option>${opts(kids,v,c=>c.name,c=>c.id)}</select>`;
+const subSel=(pfx,kids,v)=>`<label class="f" for="${pfx}-s">${T('cr_sub')}</label><select id="${pfx}-s"><option value="">${T('choose')}</option>${opts(kids,v,cLbl,c=>c.id)}</select>`;
 document.addEventListener('change',e=>{
  const el=e.target;if(!el.dataset||!el.dataset.cat)return;
  const pfx=el.dataset.cat,o=$('#'+pfx+'-co'),w=$('#'+pfx+'-sw');
@@ -171,7 +172,7 @@ async function otherReq(list,text){
 }
 function listSel(id,label,kind,v){
  const rows=(DB.lists[kind]||[]);
- return `<label class="f" for="${id}">${label}</label><select id="${id}">${opts(rows,v||rows[0])}</select>`;
+ return `<label class="f" for="${id}">${label}</label><select id="${id}">${opts(rows,v||rows[0],xl)}</select>`;
 }
 
 /* ---------- people cache ---------- */
@@ -219,11 +220,11 @@ function mapPost(r){
 }
 function mapListing(r){
  const sub=cById(r.category_id),top=sub&&sub.parent_id?cById(sub.parent_id):sub;
- return {id:r.id,views:r.views||0,status:r.status,t:r.title,d:r.description,price:Number(r.price),cur:r.currency,cat:r.category_id,catTop:top?top.id:'',catName:sub?(top&&sub.parent_id?top.name+' · '+sub.name:sub.name):'',
+ return {id:r.id,views:r.views||0,status:r.status,t:r.title,d:r.description,price:Number(r.price),cur:r.currency,cat:r.category_id,catTop:top?top.id:'',get catName(){return sub?(top&&sub.parent_id?cLbl(top)+' · '+cLbl(sub):cLbl(sub)):''},
   who:whoKey(r.author),area:areaLabel(r.district_id,r.town_id,r.area_id),cond:r.condition,hand:r.handover,per:r.period,beds:r.bedrooms,furn:r.furnished,intent:r.intent||'offer',ptype:r.property_type,baths:r.bathrooms,prop:/^market-(rent|sale)/.test(r.category_id||''),imgs:r.photos||[],img:(r.photos||[])[0]||'',exp:r.expires_at,at:r.created_at,status:r.status,ic:'tag'};
 }
 function mapDir(r){
- return {id:r.id,n:r.name,cat:r.category_id,catName:cName(r.category_id),area:areaLabel(r.district_id,r.town_id,r.area_id),district:r.district_id,addr:r.address||'',off:r.offer||'',ver:r.verified?1:0,status:r.status,who:whoKey(r.owner),img:r.photo_url||'',k:r.name,phone:r.phone||'',wa:r.whatsapp||'',web:r.website||'',hours:r.opening_hours||'',feat:!!r.featured,town:r.town_id};
+ return {id:r.id,n:r.name,cat:r.category_id,get catName(){return cName(r.category_id)},area:areaLabel(r.district_id,r.town_id,r.area_id),district:r.district_id,addr:r.address||'',off:r.offer||'',ver:r.verified?1:0,status:r.status,who:whoKey(r.owner),img:r.photo_url||'',k:r.name,phone:r.phone||'',wa:r.whatsapp||'',web:r.website||'',hours:r.opening_hours||'',feat:!!r.featured,town:r.town_id};
 }
 function nextOcc(iso,rp){
  if(!rp||rp==='none')return iso;
@@ -599,10 +600,10 @@ function marketV(){
  const note=`${safeNote()}`;
  if(!S.mshow){
   const cnt=id=>S.listings.filter(l=>l.catTop===id).length;
-  return `<div class="stack">${notes()}${head}${bannerHtml('market')}<div class="grid2">${catTile('mcat','all',T('see_all'),S.listings.length,'list')}${catTile('mlook','x',T('looking_for'),S.listings.filter(l=>l.intent==='looking').length,'search')}${top.map(c=>catTile('mcat',c.id,c.name,cnt(c.id),'tag')).join('')}</div>${note}</div>`;
+  return `<div class="stack">${notes()}${head}${bannerHtml('market')}<div class="grid2">${catTile('mcat','all',T('see_all'),S.listings.length,'list')}${catTile('mlook','x',T('looking_for'),S.listings.filter(l=>l.intent==='looking').length,'search')}${top.map(c=>catTile('mcat',c.id,cLbl(c),cnt(c.id),'tag')).join('')}</div>${note}</div>`;
  }
  const ls=S.listings.filter(l=>(cur==='all'||l.catTop===cur)&&(!S.mlook||l.intent==='looking'));
- const ttl=S.mlook?T('looking_for'):(cur==='all'?T('see_all'):esc((cById(cur)||{}).name||''));
+ const ttl=S.mlook?T('looking_for'):(cur==='all'?T('see_all'):esc(cLbl(cById(cur))));
  return `<div class="stack">${notes()}${head}<button class="btn soft" style="align-self:flex-start" data-act="mback">${ic('left','s')}${T('ic_back')}</button><h2 class="h3">${ttl}</h2>${bannerHtml('market')}
  ${ls.length?`<div class="grid2">${ls.map(l=>`<button class="tile" data-act="push" data-v="listing" data-id="${l.id}"><span class="pic">${thumbFor(l)}<span class="pr">${lmoney(l)}</span></span><span class="tb">${l.intent==='looking'?`<span class="pill" style="align-self:flex-start">${T('looking_for')}</span>`:''}<b>${esc(l.t)}</b><span class="xs mut">${esc(l.area)}</span></span></button>`).join('')}</div>`:`<div class="card" style="text-align:center"><p class="mut">${T('none_listings')}</p></div>`}
  ${note}</div>`;
@@ -611,9 +612,9 @@ V.listing=function(o){
  const l=S.listings.find(x=>x.id===o.id);if(!l)return {t:T('nav_market'),b:''};
  const w=P[l.who]||{n:'Member',h:150},mine=l.who==='me';
  const gal2=l.imgs.length?`<div class="galw"><div class="gal">${l.imgs.map(u=>`<div class="sl"><img class="art" src="${esc(u)}" alt=""></div>`).join('')}</div>${l.imgs.length>1?`<span class="gc">1/${l.imgs.length}</span>`:''}</div>`:`<div class="galw"><div class="gal"><div class="sl">${art('tag',hueOf(l.id),0,l.t)}</div></div></div>`;
- return {t:T('mk_title'),b:`<div class="stack"><div>${gal2}</div><div><span class="pill">${esc(l.catName)}</span>${l.intent==='looking'?` <span class="pill">${T('looking_for')}</span>`:''}<h1 class="h1" style="margin-top:8px">${esc(l.t)}</h1><div class="h2" style="color:var(--gd);margin-top:4px">${lmoney(l)}</div></div><p>${esc(l.d)}</p>
+ return {t:T('mk_title'),b:`<div class="stack"><div>${gal2}</div><div><span class="pill">${esc(l.catName)}</span>${l.intent==='looking'?` <span class="pill">${T('looking_for')}</span>`:''}<h1 class="h1" style="margin-top:8px">${U(l.t)}</h1><div class="h2" style="color:var(--gd);margin-top:4px">${lmoney(l)}</div></div><p>${U(l.d)}</p>
  ${actBar('listing',l.id,l.t,{})}
- <div class="card stack">${l.ptype?`<div class="row"><span class="grow mut">${T('cr_ptype')}</span><b>${esc(l.ptype)}</b></div>`:''}${l.baths?`<div class="row"><span class="grow mut">${T('cr_baths')}</span><b>${esc(l.baths)}</b></div>`:''}${l.beds?`<div class="row"><span class="grow mut">${T('cr_beds')}</span><b>${esc(l.beds)}</b></div>`:''}${l.furn?`<div class="row"><span class="grow mut">${T('cr_furn')}</span><b>${esc(l.furn)}</b></div>`:''}${l.cond?`<div class="row"><span class="grow mut">${T('cr_cond')}</span><b>${esc(l.cond)}</b></div>`:''}${l.hand?`<div class="row"><span class="grow mut">${T('cr_hand')}</span><b>${esc(l.hand)}</b></div>`:''}
+ <div class="card stack">${l.ptype?`<div class="row"><span class="grow mut">${T('cr_ptype')}</span><b>${esc(xl(l.ptype))}</b></div>`:''}${l.baths?`<div class="row"><span class="grow mut">${T('cr_baths')}</span><b>${esc(xl(l.baths))}</b></div>`:''}${l.beds?`<div class="row"><span class="grow mut">${T('cr_beds')}</span><b>${esc(xl(l.beds))}</b></div>`:''}${l.furn?`<div class="row"><span class="grow mut">${T('cr_furn')}</span><b>${esc(xl(l.furn))}</b></div>`:''}${l.cond?`<div class="row"><span class="grow mut">${T('cr_cond')}</span><b>${esc(xl(l.cond))}</b></div>`:''}${l.hand?`<div class="row"><span class="grow mut">${T('cr_hand')}</span><b>${esc(xl(l.hand))}</b></div>`:''}
  <div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('address')}</div><b>${esc(l.area)}</b></div></div><a class="btn soft block" href="${mapsUrl(l.area)}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a><div class="xs mut">${F('expires_on',{d:ymd(l.exp)})}</div></div>
  <button class="listrow" data-act="push" data-v="person" data-id="${l.who}">${av(l.who,44)}<span class="grow"><span class="xs mut">${T('sold_by')}</span><b>${esc(w.n)}</b></span>${ic('right')}</button>
  ${mine?`<div class="row"><button class="btn soft grow" data-act="sold" data-id="${l.id}">${ic('check','s')}${T('mark_sold')}</button><button class="btn line grow" data-act="dellisting" data-id="${l.id}">${ic('trash','s')}${T('delete')}</button></div>`:`<button class="btn block" data-act="msg" data-to="${esc(w.n)}" data-uid="${l.who}" data-about="${esc(l.t)}">${ic('msg','s')}${T('msg_seller')}</button>
@@ -631,7 +632,7 @@ V.dirlist=function(){
  const ls=S.dir.filter(b=>b.status==='approved').filter(b=>dc==='all'||b.cat===dc||(cById(b.cat)&&cById(b.cat).parent_id===dc)).filter(b=>!dd||b.district===dd).filter(b=>!dtn||b.town===dtn).filter(b=>!S.doff||b.off).sort((a,b)=>(b.feat?1:0)-(a.feat?1:0));
  const mine=S.dir.filter(b=>b.who==='me'&&b.status!=='approved');
  return {t:T('m_dir'),b:`<p class="mut" style="margin-bottom:10px">${T('dir_sub')}</p>${bannerHtml('directory')}
- ${S.dshow?`<button class="btn soft" style="align-self:flex-start;margin-bottom:10px" data-act="dback">${ic('left','s')}${T('ic_back')}</button>`:`<div class="grid2">${catTile('dcat','all',T('see_all'),S.dir.filter(b=>b.status==='approved').length,'list')}${catTile('doff','x',T('discounts'),S.dir.filter(b=>b.status==='approved'&&b.off).length,'gift')}${top.map(c=>catTile('dcat',c.id,c.name,S.dir.filter(b=>b.status==='approved'&&(b.cat===c.id||(cById(b.cat)&&cById(b.cat).parent_id===c.id))).length,'bag')).join('')}</div>`}
+ ${S.dshow?`<button class="btn soft" style="align-self:flex-start;margin-bottom:10px" data-act="dback">${ic('left','s')}${T('ic_back')}</button>`:`<div class="grid2">${catTile('dcat','all',T('see_all'),S.dir.filter(b=>b.status==='approved').length,'list')}${catTile('doff','x',T('discounts'),S.dir.filter(b=>b.status==='approved'&&b.off).length,'gift')}${top.map(c=>catTile('dcat',c.id,cLbl(c),S.dir.filter(b=>b.status==='approved'&&(b.cat===c.id||(cById(b.cat)&&cById(b.cat).parent_id===c.id))).length,'bag')).join('')}</div>`}
  ${S.dshow?`<select id="dd" data-act-change="ddist" style="margin:10px 0" aria-label="${esc(T('su_district'))}"><option value="">${T('filter_area')}</option>${opts(gKids(null,'district'),dd,gOpt,r=>r.id)}</select>${dd?`<select id="dt" style="margin-bottom:10px" aria-label="${esc(T('su_town'))}"><option value="">${T('all_towns')}</option>${opts(gKids(dd,'town'),dtn,gOpt,r=>r.id)}</select>`:''}`:''}
  ${mine.length?`<div class="stack" style="margin-bottom:12px">${mine.map(dcard).join('')}</div>`:''}
  ${S.dshow?`<div class="stack">${ls.length?ls.map(dcard).join(''):`<div class="card" style="text-align:center"><p class="mut">${T('none_dir')}</p></div>`}</div>`:''}`};
@@ -739,7 +740,7 @@ V.inbox=function(){
 V.thread=function(o){
  const p=P[o.id]||{n:'Member'},ms=(S.msgs||[]).filter(m=>m.from_id===o.id||m.to_id===o.id).slice().reverse();
  setTimeout(markRead,0,o.id);
- return {t:esc(p.n),b:`<div class="stack">${ms.map(m=>`<div class="card" style="${m.from_id===S.uid?'background:var(--gs);margin-left:32px':'margin-right:32px'}"><div class="xs mut">${m.about?esc(m.about)+' · ':''}${ago(minsAgo(m.created_at))}</div><div style="margin-top:4px;overflow-wrap:anywhere">${esc(m.body)}</div></div>`).join('')}<button class="btn block" data-act="msg" data-to="${esc(p.n)}" data-uid="${o.id}" data-pre="">${ic('send','s')}${T('reply')}</button></div>`};
+ return {t:esc(p.n),b:`<div class="stack">${ms.map(m=>`<div class="card" style="${m.from_id===S.uid?'background:var(--gs);margin-left:32px':'margin-right:32px'}"><div class="xs mut">${m.about?esc(m.about)+' · ':''}${ago(minsAgo(m.created_at))}</div><div style="margin-top:4px;overflow-wrap:anywhere">${U(m.body)}</div></div>`).join('')}<button class="btn block" data-act="msg" data-to="${esc(p.n)}" data-uid="${o.id}" data-pre="">${ic('send','s')}${T('reply')}</button></div>`};
 };
 async function markRead(from){
  const ids=(S.msgs||[]).filter(m=>m.from_id===from&&m.to_id===S.uid&&!m.read).map(m=>m.id);
@@ -1191,7 +1192,7 @@ function actBar(k,id,text,o){
 }
 function cmtBlock(key,k,id){
  const cm=(DB.ic||{})[key]||[];
- return `<div class="cmts">${cm.map(c=>{const w=whoKey(c.author);return `<div class="cm">${av(w,30)}<div class="bub"><b>${esc((P[w]||{n:'Member'}).n)}</b> ${esc(c.body)}</div></div>`}).join('')}<div class="cform"><input id="ici-${k}-${id}" placeholder="${T('add_comment')}" maxlength="400"><button class="btn" data-act="icmtsend" data-k="${k}" data-id="${id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`;
+ return `<div class="cmts">${cm.map(c=>{const w=whoKey(c.author);return `<div class="cm">${av(w,30)}<div class="bub"><b>${esc((P[w]||{n:'Member'}).n)}</b> ${U(c.body)}</div></div>`}).join('')}<div class="cform"><input id="ici-${k}-${id}" placeholder="${T('add_comment')}" maxlength="400"><button class="btn" data-act="icmtsend" data-k="${k}" data-id="${id}" aria-label="${T('send')}" title="${T('send')}">${ic('send','s')}</button></div></div>`;
 }
 ACT.ilike=async d=>{
  if(gate())return;const key=d.k+':'+d.id,o=DB.il[key]||(DB.il[key]={n:0,mine:false}),was=o.mine;
