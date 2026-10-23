@@ -75,6 +75,8 @@ N({
  pay_left1:["Last day to pay","Ödemek için son gün","Ostatni dzień na opłatę","Последний день для оплаты"],
  pay_how:["Pay in cash as arranged, then the team marks your account as paid. If your account locks, it opens again as soon as the payment is recorded.","Ödemeyi anlaştığınız şekilde elden yapın, ekip hesabınızı ödendi olarak işaretler. Hesap kilitlenirse ödeme kaydedilir kaydedilmez yeniden açılır.","Zapłać gotówką, jak ustalono, a zespół oznaczy konto jako opłacone. Jeśli konto się zablokuje, odblokuje się zaraz po zapisaniu płatności.","Оплатите наличными, как договорились, и команда отметит аккаунт оплаченным. Если доступ заблокирован, он откроется сразу после записи платежа."],
  pay_fee:["Monthly fee: {f}","Aylık ücret: {f}","Opłata miesięczna: {f}","Ежемесячный взнос: {f}"],
+ pend_t:["Thank you for joining","Katıldığınız için teşekkürler","Dziękujemy za dołączenie","Спасибо, что присоединились"],
+ pend_d:["Your account is waiting for approval by the administrators. We approve new members within one working day and will email you as soon as you are in. You can message us through the chat bubble or by email.","Hesabınız yöneticilerin onayını bekliyor. Yeni üyeleri bir iş günü içinde onaylıyoruz ve onaylanır onaylanmaz e-posta göndereceğiz. Sohbet balonundan veya e-posta ile bize yazabilirsiniz.","Twoje konto czeka na zatwierdzenie przez administratorów. Zatwierdzamy nowych członków w ciągu jednego dnia roboczego i wyślemy e-mail. Możesz napisać do nas przez dymek czatu lub e-mailem.","Ваш аккаунт ожидает одобрения администраторов. Мы одобряем новых участников в течение одного рабочего дня и пришлём письмо. Вы можете написать нам через чат или по почте."],
  lock_t:["Your account is paused","Hesabınız duraklatıldı","Twoje konto jest wstrzymane","Ваш аккаунт приостановлен"],
  lock_d:["Your posts and details are safe. Message us through the chat bubble or by email and we will help.","Gönderileriniz ve bilgileriniz güvende. Sohbet balonundan veya e-posta ile bize yazın, yardımcı olalım.","Twoje wpisy i dane są bezpieczne. Napisz do nas przez dymek czatu lub e-mailem, pomożemy.","Ваши записи и данные в безопасности. Напишите нам через чат или по почте, и мы поможем."],
  susp_t:["Your account is suspended","Hesabınız askıya alındı","Twoje konto jest zawieszone","Ваш аккаунт заблокирован"],
@@ -308,11 +310,11 @@ async function showLock(st){
  let c=DB.contact;
  const ct=await sb.rpc('contact_details');const row=Array.isArray(ct.data)?ct.data[0]:ct.data;if(row)c={email:row.email||''};
  DB.contact=c;
- const el=$('#lock'),susp=st==='suspended';
+ const el=$('#lock'),susp=st==='suspended',pend=!susp&&!!(S.prof&&S.prof.pending);
  el.hidden=false;$('#app').hidden=true;$('#ov').hidden=true;$('#sh').hidden=true;
- el.innerHTML=`<div class="wrap" style="max-width:520px;padding-block:40px"><div class="stack"><div style="text-align:center"><div class="mark" style="margin:0 auto 14px;width:64px;height:64px">${ic(susp?'shield':'lock','l')}</div><h1 class="h1">${T(susp?'susp_t':'lock_t')}</h1><p class="mut" style="margin-top:10px">${T(susp?'susp_d':'lock_d')}</p></div>
+ el.innerHTML=`<div class="wrap" style="max-width:520px;padding-block:40px"><div class="stack"><div style="text-align:center"><div class="mark" style="margin:0 auto 14px;width:64px;height:64px">${ic(susp?'shield':'lock','l')}</div><h1 class="h1">${T(susp?'susp_t':pend?'pend_t':'lock_t')}</h1><p class="mut" style="margin-top:10px">${T(susp?'susp_d':pend?'pend_d':'lock_d')}</p></div>
  <div class="card stack">${contactRows(c)||`<p class="mut">${T('susp_d')}</p>`}</div>
- ${susp?'':`<p class="sm mut" style="text-align:center">${T('pay_how')}</p>`}
+ ${susp||pend?'':`<p class="sm mut" style="text-align:center">${T('pay_how')}</p>`}
  <button class="btn line block" data-act="signout">${T('sign_out')}</button></div></div>`;
 }
 function hideLock(){const el=$('#lock');if(el){el.hidden=true;el.innerHTML=''}$('#app').hidden=false}
@@ -409,7 +411,7 @@ sb.auth.onAuthStateChange((ev)=>{
 /* ---------- sign-up ---------- */
 function grabSu(){
  const u=S.su,g=id=>{const e=$('#'+id);return e?e.value.trim():undefined},set=(k,id)=>{const v=g(id);if(v!==undefined)u[k]=v};
- set('name','su-n');set('biz','su-b');set('cat','su-bc');set('addr','su-ba');set('email','su-e');set('pw','su-p');set('inv','su-i');
+ set('name','su-n');set('biz','su-b');set('cat','su-bc');set('addr','su-ba');set('email','su-e');set('pw','su-p');set('inv','su-i');set('k','su-k');
  if($('#sg-d')){const v=geoVals('sg');u.d=v.d;u.t=v.t;u.a=v.a;u.to=v.to;u.ao=v.ao}
  const ag=$('#su-ag');if(ag)u.agree=ag.checked;
 }
@@ -424,7 +426,7 @@ V.signup=function(){
  if(u.step===2)return {t:T('join_free'),b:`<div class="stack"><span class="pill">${ic(biz?'bag':'user','s')}${T(biz?'su_biz':'su_ind')}</span>
   <div class="card"><input id="su-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"><label class="f" for="su-n">${T('su_name')}</label><input id="su-n" value="${esc(u.name||'')}" maxlength="40" autocomplete="name">
   ${biz?`<label class="f" for="su-b">${T('su_biz_name')}</label><input id="su-b" value="${esc(u.biz||'')}" maxlength="60">${catSel('su-b2','directory',{c:u.cat}).replace(/id="su-b2-c"/,'id="su-bc"').replace(/data-cat="su-b2"/,'data-cat="su-b2"')}<label class="f" for="su-ba">${T('su_addr')}</label><input id="su-ba" value="${esc(u.addr||'')}" maxlength="120">`:''}
-  ${geoSel('sg',{d:u.d,t:u.t,a:u.a})}</div>
+  ${geoSel('sg',{d:u.d,t:u.t,a:u.a})}<label class="f" for="su-k">${T('ap_conn')}</label><select id="su-k"><option value="">${T('ap_pick')}</option>${['tourist','expat','family','other'].map(k=>`<option value="${k}"${u.k===k?' selected':''}>${T('ap_k_'+k)}</option>`).join('')}</select></div>
   <div class="card"><label class="f" for="su-e">${T('su_email')}</label><input id="su-e" type="email" inputmode="email" autocomplete="email" value="${esc(u.email||'')}"><label class="f" for="su-p">${T('pw')}</label><input id="su-p" type="password" autocomplete="new-password" value="${esc(u.pw||'')}">
   ${DB.cfg.signup_mode==='invite'?`<label class="f" for="su-i">${T('su_invite')}</label><input id="su-i" value="${esc(u.inv||'')}" maxlength="40"><p class="xs mut" style="margin-top:6px">${T('su_invite_d')}</p><button class="btn line block" style="margin-top:10px" data-act="applyopen">${T('ap_btn')}</button>`:''}</div>
   ${biz?`<button class="opt ${u.dir?'on':''}" data-act="sudir"><span class="lf">${ic(u.dir?'check':'plus')}</span><span style="flex:1"><b>${T('su_dir')}</b><div class="sm mut">${T('su_dir_d')}</div></span></button>`:''}
@@ -441,10 +443,10 @@ ACT.sunext=async function(){
  grabSu();
  if(($('#su-hp')||{}).value){u.busy=false;renderOv(true);return}
  const biz=u.type==='biz';
- const ok=u.name&&u.email&&u.pw&&u.pw.length>=8&&u.d&&u.t&&u.agree&&(!biz||(u.biz&&u.cat));
+ const ok=u.name&&u.email&&u.pw&&u.pw.length>=8&&u.d&&u.t&&u.k&&u.agree&&(!biz||(u.biz&&u.cat));
  if(!ok){u.err=T('su_err');renderOv(true);return}
  u.err='';u.busy=true;renderOv(true);
- const meta={name:u.name,account_type:biz?'business':'member',district_id:u.d,town_id:(u.t==='__other'?'':u.t),area_id:(u.a==='__other'?'':u.a),invite_code:u.inv||'',locale:LANGS[S.L]};
+ const meta={name:u.name,account_type:biz?'business':'member',district_id:u.d,town_id:(u.t==='__other'?'':u.t),area_id:(u.a==='__other'?'':u.a),invite_code:u.inv||'',locale:LANGS[S.L],connection:u.k||''};
  if(biz){meta.biz_name=u.biz;meta.biz_cat=(u.cat&&u.cat!=='__other')?u.cat:'';meta.biz_addr=u.addr||'';meta.want_dir=!!u.dir}
  const {data,error}=await sb.auth.signUp({email:u.email,password:u.pw,options:{data:meta,emailRedirectTo:location.origin+'/'}});
  u.busy=false;
@@ -986,7 +988,7 @@ N({ap_btn:["No invite code? Apply to join","Davet kodunuz yok mu? Katılmak içi
  ap_ok:["Thank you. We have your application and will be in touch by email.","Teşekkürler. Başvurunuz alındı, e-posta ile dönüş yapacağız.","Dziękujemy. Odezwiemy się e-mailem.","Спасибо! Мы свяжемся с вами по почте."],
  ap_err:["Please add your name and a valid email.","Lütfen adınızı ve geçerli bir e-posta girin.","Podaj imię i poprawny e-mail.","Укажите имя и корректный e-mail."],
  ap_dup:["We already have an application from this email. We will be in touch.","Bu e-posta ile zaten başvuru var. Dönüş yapacağız.","Mamy już zgłoszenie z tego adresu.","Заявка с этого адреса уже есть."]});
-SH.apply=s=>`<h2 class="h2">${T('ap_t')}</h2><p class="sm mut" style="margin-top:6px">${T('ap_d')}</p><div class="stack" style="margin-top:12px"><div><label class="f" for="ap-n">${T('ap_name')}</label><input id="ap-n" maxlength="60" autocomplete="name"><label class="f" for="ap-e">${T('su_email')}</label><input id="ap-e" type="email" inputmode="email" autocomplete="email" maxlength="120"><label class="f" for="ap-c">${T('ap_country')}</label><input id="ap-c" maxlength="60"><label class="f" for="ap-k">${T('ap_conn')}</label><select id="ap-k"><option value="">${T('ap_pick')}</option>${['tourist','expat','family','resident','other'].map(k=>`<option value="${k}"${s.k===k?' selected':''}>${T('ap_k_'+k)}</option>`).join('')}</select><label class="f" for="ap-h">${T('ap_how')}</label><input id="ap-h" maxlength="120"><label class="f" for="ap-m">${T('ap_msg')}</label><textarea id="ap-m" maxlength="600"></textarea></div>${s.err?`<div class="note">${ic('info')}<div class="sm">${esc(s.err)}</div></div>`:''}<button class="btn block" data-act="applysend">${T('ap_send')}</button></div>`;
+SH.apply=s=>`<h2 class="h2">${T('ap_t')}</h2><p class="sm mut" style="margin-top:6px">${T('ap_d')}</p><div class="stack" style="margin-top:12px"><div><label class="f" for="ap-n">${T('ap_name')}</label><input id="ap-n" maxlength="60" autocomplete="name"><label class="f" for="ap-e">${T('su_email')}</label><input id="ap-e" type="email" inputmode="email" autocomplete="email" maxlength="120"><label class="f" for="ap-c">${T('ap_country')}</label><input id="ap-c" maxlength="60"><label class="f" for="ap-k">${T('ap_conn')}</label><select id="ap-k"><option value="">${T('ap_pick')}</option>${['tourist','expat','family','other'].map(k=>`<option value="${k}"${s.k===k?' selected':''}>${T('ap_k_'+k)}</option>`).join('')}</select><label class="f" for="ap-h">${T('ap_how')}</label><input id="ap-h" maxlength="120"><label class="f" for="ap-m">${T('ap_msg')}</label><textarea id="ap-m" maxlength="600"></textarea></div>${s.err?`<div class="note">${ic('info')}<div class="sm">${esc(s.err)}</div></div>`:''}<button class="btn block" data-act="applysend">${T('ap_send')}</button></div>`;
 ACT.applyopen=()=>{if(S.su)grabSu();openSheet({v:'apply'})};
 ACT.applysend=async()=>{
  const n=val('ap-n'),e=val('ap-e');

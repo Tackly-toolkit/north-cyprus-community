@@ -14,6 +14,7 @@ const aRow=(act,attrs,title,sub,right)=>`<button class="listrow" data-act="${act
 const aStatePill=m=>{
  if(m.suspended||m.state==='suspended')return '<span class="pill red">Suspended</span>';
  if(m.role==='admin')return '<span class="pill">Admin</span>';
+ if(m.pending)return '<span class="pill red">Waiting for approval</span>';
  if(m.state==='locked')return '<span class="pill red">Locked</span>';
  if(m.state==='grace')return `<span class="pill red">Due · ${m.days_left} d</span>`;
  return '<span class="pill">Active</span>';
@@ -23,7 +24,7 @@ const aSw=(on,act,attrs,label)=>`<button class="tg ${on?'on':''}" role="switch" 
 
 /* ---------- loading ---------- */
 async function admLoad(sec,x){
- if(sec==='members'||sec==='member'||sec==='due'){ADM.members=await aok(sb.rpc('admin_members'))}
+ if(sec==='members'||sec==='member'||sec==='due'){ADM.members=await aok(sb.rpc('admin_members'));try{const ex=await sb.rpc('admin_member_extra');const mp={};(ex.data||[]).forEach(x=>mp[x.id]=x);ADM.members.forEach(m=>{const x=mp[m.id]||{};m.pending=!!x.pending;m.connection=x.connection||null})}catch(e){}}
  if(sec==='member'){ADM.pay=await aok(sb.from('payments').select('*').eq('profile_id',x).order('created_at',{ascending:false}))}
  if(sec==='invites'){ADM.invites=await aok(sb.from('invites').select('*').order('created_at',{ascending:false}));ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
  if(sec==='settings'){ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
@@ -85,7 +86,7 @@ V.admin=function(){
  ${r('support','Chat messages','Members writing to you through the chat bubble',0,ADM.supn)}
  ${bill()?r('due','Payments due','Reminders, mark paid, lock, spreadsheet download','adm_due',s.in_grace):''}
  ${r('joinreq','Applications','People asking to join (Apply to join)',0,ADM.jrn)}
- ${r('members','Members','Search, lock, suspend')}
+ ${r('members','Members','Approve new members, search, lock, suspend',0,s.pending_members)}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
  ${r('info','Places and useful contacts','Places to visit, pharmacies, muktars, government, airports and borders')}
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
@@ -112,14 +113,14 @@ ACT.push=function(d){if(d.v==='admin'&&S.admin){return ACT.adminhome()}return pu
 /* ---------- members ---------- */
 V.adm_members=function(){
  const f=S.amf||'all';
- const chips=[['all','All'],...(bill()?[['grace','Payment due']]:[]),['locked','Locked'],['suspended','Suspended'],['business','Businesses'],['admin','Admins']];
+ const chips=[['all','All'],['pending','Waiting for approval'],...(bill()?[['grace','Payment due']]:[]),['locked','Locked'],['suspended','Suspended'],['business','Businesses'],['admin','Admins']];
  return {t:'Members',b:`<div class="stack"><input id="a-q" type="search" placeholder="Search name or email" value="${esc(S.amq||'')}" autocomplete="off"><div class="chips">${chips.map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="amf" data-id="${c[0]}">${c[1]}</button>`).join('')}</div><div id="a-list" class="stack">${memList()}</div></div>`};
 };
 function memList(){
  const f=S.amf||'all',q=(S.amq||'').toLowerCase();
  const ls=(ADM.members||[]).filter(m=>{
   if(q&&!((m.display_name||'')+' '+(m.email||'')).toLowerCase().includes(q))return false;
-  if(f==='grace')return m.state==='grace';if(f==='locked')return m.state==='locked'&&!m.suspended;if(f==='suspended')return m.suspended;
+  if(f==='pending')return !!m.pending;if(f==='grace')return m.state==='grace';if(f==='locked')return m.state==='locked'&&!m.suspended;if(f==='suspended')return m.suspended;
   if(f==='business')return m.account_type==='business';if(f==='admin')return m.role==='admin';return true});
  return `<div class="xs mut">${ls.length} of ${(ADM.members||[]).length}</div>`+ls.map(m=>aRow('admgo',`data-sec="member" data-x="${m.id}"`,esc(m.display_name||'(no name)'),`${esc(m.email)} · ${m.account_type==='business'?'Business':'Member'} · due ${aDate(m.due_on)}`,aStatePill(m)+ic('right'))).join('');
 }
@@ -136,6 +137,7 @@ V.adm_member=function(o){
  <div class="sm mut">Joined ${aDate(m.joined_at)} · Free until ${aDate(m.free_until)}${m.paid_until?' · Paid until '+aDate(m.paid_until):''}</div>
  ${live()?`<div class="sm"><b>Next due: ${aDate(m.due_on)}</b>`:`<div class="sm"><b>Free member</b> · charging is off. If you switch it on, their next due date would be ${aDate(m.paid_until||m.free_until)}`}${live()&&m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
  ${bill()?`<div class="card stack"><b>Record a payment</b><div class="grid2" style="gap:10px"><div><label class="f" for="a-amt">Amount (TL)</label><input id="a-amt" type="number" inputmode="decimal" value="${esc(fee)}"></div><div><label class="f" for="a-mo">Months</label><select id="a-mo">${[1,2,3,6,12].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div><label class="f" for="a-nt">Note (optional)</label><input id="a-nt" maxlength="120" placeholder="e.g. cash, 14 Oct">${aBtn('apay',`${ic('check','s')}Record payment and open account`,`data-id="${m.id}"`,'')}</div>`:''}
+ ${m.pending?`<div class="card stack" style="border:2px solid var(--r)"><b>Waiting for approval</b><div class="sm">Connection: ${({tourist:'Tourist or planning a trip',expat:'Expat',family:'Family or friend of someone connected',other:'Other'})[m.connection]||'not given'}</div><div class="xs mut">Approving opens their account and emails them a welcome. To decline, use Suspend (ban) or delete the account below.</div>${aBtn('aapprove','Approve member',`data-id="${m.id}"`)}</div>`:''}
  <div class="card stack"><b>Send a warning</b><div class="xs mut">Appears in their chat with the administrators and they get an alert. It is logged in the activity log.</div><textarea id="a-warn" maxlength="400" style="min-height:70px" placeholder="e.g. Please keep to the house rules. Listings that ask for money in advance are not allowed."></textarea>${aBtn('awarn','Send warning',`data-id="${m.id}"`)}</div>
  <div class="card stack"><b>Account control</b>
  <div class="row" style="flex-wrap:wrap">${aBtn('alock',m.manual_lock?'Remove manual lock':'Lock account now',`data-id="${m.id}" data-v="${m.manual_lock?0:1}"`)}${aBtn('asusp',m.suspended?'Reinstate':'Suspend (ban)',`data-id="${m.id}" data-v="${m.suspended?0:1}"`,m.suspended?'soft':'line')}</div>
@@ -149,7 +151,8 @@ ACT.apay=async d=>{
  await aok(sb.rpc('mark_paid',{p_profile:d.id,p_months:mo,p_amount:isNaN(amt)?null:amt,p_note:val('a-nt')||null}));
  toast('Payment recorded');await admReload();
 };
-ACT.alock=async d=>{await aok(sb.from('profiles').update({manual_lock:d.v==='1'}).eq('id',d.id));aLog(d.v==='1'?'lock':'unlock',{profile:d.id});toast('Saved');admReload()};
+ACT.alock=async d=>{await aok(sb.from('profiles').update(d.v==='1'?{manual_lock:true}:{manual_lock:false,pending:false}).eq('id',d.id));aLog(d.v==='1'?'lock':'unlock',{profile:d.id});toast('Saved');admReload()};
+ACT.aapprove=async d=>{await aok(sb.rpc('admin_approve_member',{uid:d.id}));aLog('approve_member',{profile:d.id});toast('Approved. They have been emailed.');admReload()};
 ACT.awarn=async d=>{const b=val('a-warn');if(!b)return toast('Write the warning first');await aok(sb.from('support_messages').insert({member:d.id,from_admin:true,body:'Warning from the administrators: '+b}));aLog('warn_member',{profile:d.id});toast('Warning sent');admReload()};
 ACT.asusp=async d=>{await aok(sb.from('profiles').update({suspended:d.v==='1'}).eq('id',d.id));aLog(d.v==='1'?'suspend':'reinstate',{profile:d.id});toast('Saved');admReload()};
 ACT.aext=async d=>{const m=ADM.members.find(x=>x.id===d.id);const base=new Date(Math.max(Date.now(),new Date(m.free_until).getTime()));base.setDate(base.getDate()+30);await aok(sb.from('profiles').update({free_until:base.toISOString()}).eq('id',d.id));aLog('extend_free',{profile:d.id});toast('Free period extended');admReload()};
