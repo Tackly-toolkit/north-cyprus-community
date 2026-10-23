@@ -24,7 +24,7 @@ const aSw=(on,act,attrs,label)=>`<button class="tg ${on?'on':''}" role="switch" 
 
 /* ---------- loading ---------- */
 async function admLoad(sec,x){
- if(sec==='members'||sec==='member'||sec==='due'){ADM.members=await aok(sb.rpc('admin_members'));try{const ex=await sb.rpc('admin_member_extra');const mp={};(ex.data||[]).forEach(x=>mp[x.id]=x);ADM.members.forEach(m=>{const x=mp[m.id]||{};m.pending=!!x.pending;m.connection=x.connection||null})}catch(e){}}
+ if(sec==='members'||sec==='member'||sec==='due'||sec==='home'){ADM.members=await aok(sb.rpc('admin_members'));try{const ex=await sb.rpc('admin_member_extra');const mp={};(ex.data||[]).forEach(x=>mp[x.id]=x);ADM.members.forEach(m=>{const x=mp[m.id]||{};m.pending=!!x.pending;m.connection=x.connection||null})}catch(e){}}
  if(sec==='member'){ADM.pay=await aok(sb.from('payments').select('*').eq('profile_id',x).order('created_at',{ascending:false}))}
  if(sec==='invites'){ADM.invites=await aok(sb.from('invites').select('*').order('created_at',{ascending:false}));ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
  if(sec==='settings'){ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
@@ -83,9 +83,10 @@ V.admin=function(){
  const c=(n,l)=>`<div class="card" style="text-align:center;padding:12px 8px"><div class="h2">${n===undefined?'–':n}</div><div class="xs mut">${l}</div></div>`;
  const r=(sec,l,sub,view,n)=>aRow('admgo',`data-sec="${sec}" ${view?`data-view="${view}"`:''}`,l,sub,n?`<span class="pill red">${n}</span>`:undefined);
  return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${c(s.businesses,'Businesses')}${bill()?c(s.in_grace,'Payment due'):''}${c(s.locked,'Locked')}</div>
+${(()=>{const w=(ADM.members||[]).filter(m=>m.pending);if(!w.length)return '';const kl={tourist:'Tourist or planning a trip',expat:'Expat',family:'Family or friend of someone connected',other:'Other'};return `<div class="card stack" style="border:2px solid var(--r)"><b>New members waiting for approval (${w.length})</b><div class="xs mut">They cannot enter the community until you approve them.</div>${w.map(m=>`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b style="overflow-wrap:anywhere">${esc(m.display_name||'(no name)')}</b><div class="xs mut" style="overflow-wrap:anywhere">${esc(m.email)} · ${kl[m.connection]||'connection not given'}</div><div class="row" style="flex-wrap:wrap">${aBtn('aapprove',`data-id="${m.id}"`,'Approve')}${aBtn('admgo',`data-sec="member" data-x="${m.id}"`,'Open','line')}</div></div>`).join('')}</div>`})()}
  ${r('support','Chat messages','Members writing to you through the chat bubble',0,ADM.supn)}
  ${bill()?r('due','Payments due','Reminders, mark paid, lock, spreadsheet download','adm_due',s.in_grace):''}
- ${r('joinreq','Applications','People asking to join (Apply to join)',0,ADM.jrn)}
+ ${r('joinreq','Applications','Only used if sign-up is invitation only. New members to approve are in the red box at the top and under Members',0,ADM.jrn)}
  ${r('members','Members','Approve new members, search, lock, suspend',0,s.pending_members)}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
  ${r('info','Places and useful contacts','Places to visit, pharmacies, muktars, government, airports and borders')}
