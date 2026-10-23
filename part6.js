@@ -206,3 +206,24 @@ async function mfaGate(){
  }catch(e){}
  return false;
 }
+
+/* ---------- messages: show what I send straight away, and pick up replies without reloading ---------- */
+async function refreshMsgs(){
+ if(!S.uid)return;
+ try{
+  const {data,error}=await sb.from('messages').select('*').or('to_id.eq.'+S.uid+',from_id.eq.'+S.uid).order('created_at',{ascending:false}).limit(80);
+  if(error||!data)return;
+  const old=(S.msgs||[]).length,oldIds=(S.msgs||[]).map(m=>m.id).join();
+  S.msgs=data.filter(m=>!(S.blk&&S.blk[m.from_id===S.uid?m.to_id:m.from_id]==='block'));
+  const need=[...new Set(S.msgs.map(m=>m.from_id===S.uid?m.to_id:m.from_id))].filter(i=>!P[i]);
+  if(need.length&&typeof loadPeople==='function')await loadPeople(need);
+  S.unread=S.msgs.filter(m=>m.to_id===S.uid&&!m.read).length+(typeof frIn==='function'?frIn().length:0);
+  if(S.msgs.map(m=>m.id).join()!==oldIds){renderTop();renderMain();renderOv(true)}
+ }catch(e){}
+}
+{
+ const _ms=ACT.msgsend;
+ ACT.msgsend=async function(){await _ms.apply(this,arguments);await refreshMsgs()};
+ setInterval(()=>{if(S.uid&&S.prof&&!document.hidden)refreshMsgs()},12000);
+ document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshMsgs()});
+}
