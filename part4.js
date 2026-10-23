@@ -973,17 +973,27 @@ N({ap_btn:["No invite code? Apply to join","Davet kodunuz yok mu? Katılmak içi
  ap_d:["Tell us a little about yourself. We will reply by email with an invitation and how to get started.","Kendinizden kısaca bahsedin. Davet ve başlangıç bilgisiyle e-posta ile döneceğiz.","Napisz kilka słów o sobie. Odpiszemy e-mailem z zaproszeniem.","Расскажите немного о себе. Мы ответим по почте с приглашением."],
  ap_name:["Your name","Adınız","Imię","Ваше имя"],ap_country:["Country you are from","Geldiğiniz ülke","Kraj","Страна"],
  ap_how:["How did you hear about us?","Bizi nereden duydunuz?","Skąd o nas wiesz?","Как вы о нас узнали?"],
+ ap_conn:["How are you connected to North Cyprus?","Kuzey Kıbrıs ile bağınız nedir?","Jaki masz związek z Cyprem Północnym?","Какая у вас связь с Северным Кипром?"],
+ ap_pick:["Please choose one","Lütfen birini seçin","Wybierz jedną opcję","Выберите вариант"],
+ ap_k_tourist:["Tourist or planning a trip","Turist veya gezi planlıyorum","Turysta lub planuję wyjazd","Турист или планирую поездку"],
+ ap_k_expat:["Expat","Gurbetçi / yurt dışında yaşıyorum","Ekspat","Эмигрант"],
+ ap_k_family:["Family or friend of someone connected to North Cyprus","Kuzey Kıbrıs bağlantılı birinin ailesi veya arkadaşı","Rodzina lub przyjaciel osoby związanej z Cyprem Północnym","Семья или друг человека, связанного с Северным Кипром"],
+ ap_k_resident:["Resident of North Cyprus","Kuzey Kıbrıs sakini","Mieszkaniec Cypru Północnego","Житель Северного Кипра"],
+ ap_k_other:["Other (tell us in the box below)","Diğer (aşağıdaki kutuya yazın)","Inne (napisz poniżej)","Другое (напишите ниже)"],
+ ap_conn_err:["Please tell us how you are connected to North Cyprus.","Lütfen Kuzey Kıbrıs ile bağınızı belirtin.","Powiedz nam, jaki masz związek z Cyprem Północnym.","Укажите, какая у вас связь с Северным Кипром."],
  ap_msg:["Anything you would like to add (optional)","Eklemek istedikleriniz (isteğe bağlı)","Coś jeszcze (opcjonalnie)","Что-то добавить (необязательно)"],
  ap_send:["Send application","Başvuruyu gönder","Wyślij","Отправить"],
  ap_ok:["Thank you. We have your application and will be in touch by email.","Teşekkürler. Başvurunuz alındı, e-posta ile dönüş yapacağız.","Dziękujemy. Odezwiemy się e-mailem.","Спасибо! Мы свяжемся с вами по почте."],
  ap_err:["Please add your name and a valid email.","Lütfen adınızı ve geçerli bir e-posta girin.","Podaj imię i poprawny e-mail.","Укажите имя и корректный e-mail."],
  ap_dup:["We already have an application from this email. We will be in touch.","Bu e-posta ile zaten başvuru var. Dönüş yapacağız.","Mamy już zgłoszenie z tego adresu.","Заявка с этого адреса уже есть."]});
-SH.apply=s=>`<h2 class="h2">${T('ap_t')}</h2><p class="sm mut" style="margin-top:6px">${T('ap_d')}</p><div class="stack" style="margin-top:12px"><div><label class="f" for="ap-n">${T('ap_name')}</label><input id="ap-n" maxlength="60" autocomplete="name"><label class="f" for="ap-e">${T('su_email')}</label><input id="ap-e" type="email" inputmode="email" autocomplete="email" maxlength="120"><label class="f" for="ap-c">${T('ap_country')}</label><input id="ap-c" maxlength="60"><label class="f" for="ap-h">${T('ap_how')}</label><input id="ap-h" maxlength="120"><label class="f" for="ap-m">${T('ap_msg')}</label><textarea id="ap-m" maxlength="600"></textarea></div>${s.err?`<div class="note">${ic('info')}<div class="sm">${esc(s.err)}</div></div>`:''}<button class="btn block" data-act="applysend">${T('ap_send')}</button></div>`;
+SH.apply=s=>`<h2 class="h2">${T('ap_t')}</h2><p class="sm mut" style="margin-top:6px">${T('ap_d')}</p><div class="stack" style="margin-top:12px"><div><label class="f" for="ap-n">${T('ap_name')}</label><input id="ap-n" maxlength="60" autocomplete="name"><label class="f" for="ap-e">${T('su_email')}</label><input id="ap-e" type="email" inputmode="email" autocomplete="email" maxlength="120"><label class="f" for="ap-c">${T('ap_country')}</label><input id="ap-c" maxlength="60"><label class="f" for="ap-k">${T('ap_conn')}</label><select id="ap-k"><option value="">${T('ap_pick')}</option>${['tourist','expat','family','resident','other'].map(k=>`<option value="${k}"${s.k===k?' selected':''}>${T('ap_k_'+k)}</option>`).join('')}</select><label class="f" for="ap-h">${T('ap_how')}</label><input id="ap-h" maxlength="120"><label class="f" for="ap-m">${T('ap_msg')}</label><textarea id="ap-m" maxlength="600"></textarea></div>${s.err?`<div class="note">${ic('info')}<div class="sm">${esc(s.err)}</div></div>`:''}<button class="btn block" data-act="applysend">${T('ap_send')}</button></div>`;
 ACT.applyopen=()=>{if(S.su)grabSu();openSheet({v:'apply'})};
 ACT.applysend=async()=>{
  const n=val('ap-n'),e=val('ap-e');
  if(n.length<2||!/^\S+@\S+\.\S+$/.test(e)){openSheet({v:'apply',err:T('ap_err')});return}
- const row={name:n,email:e,country:val('ap-c')||null,how_heard:val('ap-h')||null,message:val('ap-m')||null};
+ const k=val('ap-k');
+ if(!k){openSheet({v:'apply',err:T('ap_conn_err')});return}
+ const row={name:n,email:e,connection:k,country:val('ap-c')||null,how_heard:val('ap-h')||null,message:val('ap-m')||null};
  const {error}=await sb.from('join_requests').insert(row);
  if(error&&error.code!=='23505')return toast(error.message);
  closeSheet();toast(error?T('ap_dup'):T('ap_ok'));
