@@ -1,6 +1,6 @@
 # Generates the branded email templates (Supabase auth variables like {{ .ConfirmationURL }} stay as-is).
 import html
-LOGO='{{ .SiteURL }}/icon-192.png'
+LOGO='https://tszeooiaylkguqzxysbh.supabase.co/storage/v1/object/public/email-assets/icon-192.png'
 def wrap(title_en,title_tr,body_en,body_tr,btn_en=None,btn_tr=None,url='{{ .ConfirmationURL }}',code=False,foot_en='If you did not ask for this email you can safely ignore it.',foot_tr='Bu e-postayı siz istemediyseniz görmezden gelebilirsiniz.'):
     btn=''
     if btn_en:
@@ -10,14 +10,11 @@ def wrap(title_en,title_tr,body_en,body_tr,btn_en=None,btn_tr=None,url='{{ .Conf
     if code:
         codeblock='<tr><td align="center" style="padding:10px 0"><div style="display:inline-block;background:#eef5f0;border-radius:14px;padding:14px 28px;font-size:30px;letter-spacing:8px;font-weight:700;color:#1f5d4a">{{ .Token }}</div></td></tr>'
     return f'''<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="color-scheme" content="light"><title>{title_en}</title></head>
-<body style="margin:0;padding:0;background:#e9f0ec;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d2f28">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#e9f0ec"><tr><td align="center" style="padding:28px 14px">
+<body style="margin:0;padding:0;background:#d9ecec;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#1d2f28">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#d9ecec"><tr><td align="center" style="padding:28px 14px">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
-<tr><td align="center" style="background:#1f5d4a;background-image:linear-gradient(135deg,#2f8f8a,#1f5d4a);border-radius:22px 22px 0 0;padding:30px 20px 24px">
-<img src="{LOGO}" width="68" height="68" alt="North Cyprus Community" style="display:block;border-radius:18px;border:0">
-<div style="color:#ffffff;font-size:18px;font-weight:700;margin-top:12px;letter-spacing:.2px">North Cyprus Community</div>
-<div style="color:#cfe6dc;font-size:13px;margin-top:3px">Friends and neighbours, wherever you are</div></td></tr>
-<tr><td style="background:#ffffff;padding:30px 28px 26px;border-radius:0 0 22px 22px;box-shadow:0 10px 30px rgba(31,93,74,.12)">
+<tr><td style="background:#2b9ba3;border-radius:22px 22px 0 0;line-height:0;font-size:0"><img src="https://tszeooiaylkguqzxysbh.supabase.co/storage/v1/object/public/email-assets/email-hero.png" width="520" alt="North Cyprus Community. Friends and neighbours, wherever you are" style="display:block;width:100%;max-width:520px;height:auto;border:0;border-radius:22px 22px 0 0"></td></tr>
+<tr><td style="background:#ffffff;padding:30px 28px 26px;border-radius:0;box-shadow:0 10px 30px rgba(31,93,74,.12)">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
 <tr><td style="font-size:22px;font-weight:800;color:#1d2f28;padding-bottom:10px">{title_en}</td></tr>
 <tr><td style="font-size:16px;line-height:1.6;color:#33463e;padding-bottom:16px">{body_en}</td></tr>
@@ -26,6 +23,7 @@ def wrap(title_en,title_tr,body_en,body_tr,btn_en=None,btn_tr=None,url='{{ .Conf
 <tr><td style="font-size:17px;font-weight:700;color:#1d2f28;padding-top:18px">{title_tr}</td></tr>
 <tr><td style="font-size:15px;line-height:1.6;color:#4a5e55;padding-top:6px">{body_tr}</td></tr>
 </table></td></tr>
+<tr><td style="background:linear-gradient(180deg,#fdf3df,#f4e6c6);background-color:#fbefd5;padding:20px 28px 22px;border-radius:0 0 22px 22px;text-align:center"><div style="font-size:16px;font-weight:700;color:#7a4f1d;line-height:1.45">A friendly community bringing residents, tourists and expats together.</div><div style="font-size:13.5px;color:#8a6a3d;line-height:1.5;margin-top:4px">Sakinleri, turistleri ve gurbetçileri bir araya getiren samimi bir topluluk.</div><div style="margin-top:12px"><a href="{{{{ .SiteURL }}}}" style="display:inline-block;font-size:14px;font-weight:700;color:#1f5d4a;text-decoration:none;border:2px solid #1f5d4a;border-radius:999px;padding:8px 20px">Visit ncyprusconnect.com</a></div></td></tr>
 <tr><td align="center" style="padding:18px 10px 4px;font-size:12.5px;line-height:1.6;color:#6b7f76">{foot_en}<br>{foot_tr}<br><span style="color:#8a9c93">Free to join · A private circle · Made with care</span></td></tr>
 </table></td></tr></table></body></html>'''
 T={
