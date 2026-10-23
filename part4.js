@@ -543,7 +543,7 @@ const infoOf=k=>(DB.info||[]).filter(i=>i.kind===k);
 async function loadInfo(){const r=await sb.from('info_items').select('*').eq('active',true).order('sort').order('title');DB.info=r.data||[]}
 function infoCard(i){
  const rows=[];
- if(i.body)rows.push(`<div style="overflow-wrap:anywhere;white-space:pre-wrap">${esc(i.body)}</div>`);
+ if(i.body)rows.push(`<div style="overflow-wrap:anywhere;white-space:pre-wrap">${U(i.body)}</div>`);
  if(i.hours)rows.push(`<div class="row">${ic('clock','s')}<span class="grow sm">${esc(i.hours)}</span></div>`);
  if(i.fee)rows.push(`<div class="row"><span class="sm mut">${T('ii_fee')}</span><b class="grow sm">${esc(i.fee)}</b></div>`);
  const b=[];
@@ -552,7 +552,7 @@ function infoCard(i){
  if(i.website){const u=/^https?:\/\//i.test(i.website)?i.website:'https://'+i.website;b.push(`<a class="btn line grow" href="${esc(u)}" target="_blank" rel="noopener nofollow">${ic('globe','s')}${T('biz_web')}</a>`)}
  if(b.length)rows.push(`<div class="row" style="flex-wrap:wrap">${b.join('')}</div>`);
  const src=[i.checked_on?F('ii_checked',{d:ymd(i.checked_on)}):'',i.source_url?`<a href="${esc(i.source_url)}" target="_blank" rel="noopener nofollow">${T('ii_source')}</a>`:''].filter(Boolean).join(' · ');
- return `<div class="card stack"><b style="overflow-wrap:anywhere">${esc(i.title)}</b>${rows.join('')}${src?`<div class="xs mut">${src}</div>`:''}</div>`;
+ return `<div class="card stack"><b style="overflow-wrap:anywhere">${U(i.title)}</b>${rows.join('')}${src?`<div class="xs mut">${src}</div>`:''}</div>`;
 }
 const ICAT_IC={hospital:'heart',pharmacy_duty:'plus',police:'shield',fire_rescue:'zap',emergency_other:'buoy',embassy:'flag',muktar:'user',municipality:'home',government:'file',transport:'truck',power:'zap',museum:'book',historic:'star',beach:'sun',nature:'island',other:'pin'};
 function infoView(kind,cats,title){
@@ -644,7 +644,7 @@ V.dir=function(o){
  const b=S.dir.find(x=>x.id===o.id);if(!b)return {t:T('m_dir'),b:''};
  const addr=[b.addr,b.area].filter(Boolean).join(', ');
  return {t:esc(b.n),b:`<div class="stack">${b.img?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(b.img)}" alt=""></div></div></div>`:''}<div class="card"><div class="row"><span class="lf">${esc(b.n[0])}</span><div class="grow"><h1 class="h2">${esc(b.n)}</h1><div class="sm mut">${esc(b.catName)} · ${esc(b.area)}</div></div></div><div style="margin-top:10px"><span class="pill ${b.ver?'':'red'}">${ic(b.ver?'vcheck':'info','s')}${b.ver?T('verified'):T('unverified')}</span></div></div>
- ${b.off?`<div class="card" style="background:var(--gs)"><div class="xs mut" style="text-transform:uppercase;letter-spacing:.06em">${T('offer_t')}</div><div class="h2" style="margin-top:4px">${esc(b.off)}</div></div>`:''}
+ ${b.off?`<div class="card" style="background:var(--gs)"><div class="xs mut" style="text-transform:uppercase;letter-spacing:.06em">${T('offer_t')}</div><div class="h2" style="margin-top:4px">${U(b.off)}</div></div>`:''}
  <div class="card stack"><div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('address')}</div><b>${esc(addr)}</b></div></div><a class="btn soft block" href="${mapsUrl((b.n+' '+addr).trim())}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a></div>
  ${bizContact(b)}
  ${recBlock(b)}
@@ -661,7 +661,7 @@ V.events=function(){
 V.event=function(o){
  const e=S.meetups.find(x=>x.id===o.id);if(!e)return {t:T('m_events'),b:''};
  const g=e.goingMe,n=e.n;
- return {t:esc(e.t),b:`<div class="stack"><div><span class="pill">${ic('cal','s')}${T('m_events')}</span>${e.rep&&e.rep!=='none'?` <span class="pill">${T('rp_'+e.rep)}</span>`:''}<h1 class="h1" style="margin-top:10px">${esc(e.t)}</h1></div>
+ return {t:esc(e.t),b:`<div class="stack"><div><span class="pill">${ic('cal','s')}${T('m_events')}</span>${e.rep&&e.rep!=='none'?` <span class="pill">${T('rp_'+e.rep)}</span>`:''}<h1 class="h1" style="margin-top:10px">${U(e.t)}</h1></div>
  <div class="card stack"><div class="row">${ic('cal')}<div class="grow"><div class="xs mut">${T('ev_when')}</div><b>${fdate(e.starts.slice(0,10),1)} · ${new Date(e.starts).toLocaleTimeString(LOC[S.L],{hour:'2-digit',minute:'2-digit'})}</b></div></div><div class="row">${ic('pin')}<div class="grow"><div class="xs mut">${T('ev_where')}</div><b>${esc(e.where||T('ev_venue'))}</b></div></div><a class="btn soft block" href="${mapsUrl(e.where)}" target="_blank" rel="noopener">${ic('compass','s')}${T('directions')}</a><div class="row">${ic('users')}<div class="grow"><b>${F('ev_who',{n})}</b></div></div></div>
  <button class="btn block ${g?'soft':''}" data-act="going" data-id="${e.id}">${ic(g?'check':'plus','s')}${g?T('going_on'):T('going')}</button>
  ${actBar('event',e.id,e.t,{mine:e.who==='me'||S.admin})}</div>`};
@@ -1045,7 +1045,7 @@ const gcVis=()=>GC.map(g=>({g,ix:g.it.map((_,i)=>i).filter(i=>gtOf(g.id+':'+i))}
 function gtBody(t){
  return String(t||'').split(/\n\s*\n/).map(b=>{const ls=b.split('\n').map(s=>s.trim()).filter(Boolean);if(!ls.length)return '';
   const head=ls.length>1&&ls[0].length<=70&&!/[.:;!?]$/.test(ls[0]);
-  return (head?`<h2 class="h3" style="margin-top:6px">${esc(ls[0])}</h2>`:'')+`<p style="overflow-wrap:anywhere;white-space:pre-wrap">${esc((head?ls.slice(1):ls).join('\n'))}</p>`}).join('');
+  return (head?`<h2 class="h3" style="margin-top:6px">${U(ls[0])}</h2>`:'')+`<p style="overflow-wrap:anywhere;white-space:pre-wrap">${U((head?ls.slice(1):ls).join('\n'))}</p>`}).join('');
 }
 const srcLine=(o)=>[o.checked_on?F('gt_chk',{d:ymd(o.checked_on)}):'',o.source_url?`<a href="${esc(o.source_url)}" target="_blank" rel="noopener nofollow">${T('gt_src')}${o.source_name?': '+esc(o.source_name):''}</a>`:''].filter(Boolean).join(' · ');
 V.guides=function(){const v=gcVis();return {t:T('m_guides'),b:`<p class="mut" style="margin-bottom:12px">${T('guides_sub')}</p><div class="grid2">${v.map(({g,ix})=>`<button class="mod" data-act="push" data-v="gcat" data-id="${g.id}"><span class="mp">${thmArt(g.id)}</span><b>${A(g.n)}</b><small>${F('gcount',{n:ix.length})}</small></button>`).join('')}</div>`}};
@@ -1067,7 +1067,7 @@ V.updates=function(){
 ACT.ucat=d=>{S.ucat=d.id;renderOv(true)};
 V.update=function(o){const u=(S.upd||[]).find(x=>x.id===o.id);if(!u)return {t:T('m_updates'),b:''};
  const off=u.source_url||u.law_ref;
- return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<div class="row" style="flex-wrap:wrap;gap:8px">${catPill(u)}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span></div><h1 class="h1">${esc(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${esc(u.body)}</p>
+ return {t:T('m_updates'),b:`<div class="stack">${u.image_url?`<div class="galw"><div class="gal"><div class="sl"><img class="art" src="${esc(u.image_url)}" alt=""></div></div></div>`:''}<div class="row" style="flex-wrap:wrap;gap:8px">${catPill(u)}<span class="pill">${ic('cal','s')}${ymd(u.created_at)}</span></div><h1 class="h1">${U(u.title)}</h1><p style="white-space:pre-wrap;overflow-wrap:anywhere">${U(u.body)}</p>
  ${off?`<div class="card stack">${u.law_ref?`<b>${T('gt_law')}</b><div class="sm" style="overflow-wrap:anywhere">${esc(u.law_ref)}</div>`:''}<div class="xs mut">${srcLine(u)}</div></div>`:''}
  ${u.guide_key&&gtOf(u.guide_key)?`<button class="btn soft block" data-act="push" data-v="guide" data-id="${esc(u.guide_key)}">${ic('book','s')}${T('up_guide')}</button>`:''}
  <div class="note g">${ic('info')}<div class="sm">${off?T('up_from_off'):T('up_from')}</div></div>${actBar('update',u.id,u.title,{})}</div>`}};
