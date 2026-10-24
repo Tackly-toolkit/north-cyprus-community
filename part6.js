@@ -231,14 +231,14 @@ async function refreshMsgs(){
 /* ---------- links in admin alert emails: ?go=reports opens that admin page after sign-in and PIN ---------- */
 {
  const ok=['reports','support','members','joinreq','requests','content','home'];
- try{const g=new URLSearchParams(location.search).get('go');if(g&&ok.includes(g)){sessionStorage.setItem('nc_go',g);history.replaceState(null,'',location.pathname)}}catch(e){}
+ try{const g=new URLSearchParams(location.search).get('go');if(g&&(ok.includes(g)||/^member:[0-9a-f-]{36}$/.test(g))){sessionStorage.setItem('nc_go',g);history.replaceState(null,'',location.pathname)}}catch(e){}
  window.tryGo=async function(){
   let g=null;try{g=sessionStorage.getItem('nc_go')}catch(e){}
   if(!g||!S.uid||!S.admin)return;
   if(await mfaGate())return;
   try{sessionStorage.removeItem('nc_go')}catch(e){}
   S.stack=[];
-  try{if(g==='home')await ACT.adminhome();else await admGo(g)}catch(e){}
+  try{if(g==='home')await ACT.adminhome();else if(g.indexOf('member:')===0)await admGo('member',g.slice(7));else await admGo(g)}catch(e){}
  };
  const _sync=sync;
  sync=async function(){const r=await _sync.apply(this,arguments);setTimeout(()=>{try{tryGo()}catch(e){}},300);return r};
