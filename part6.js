@@ -227,3 +227,19 @@ async function refreshMsgs(){
  setInterval(()=>{if(S.uid&&S.prof&&!document.hidden)refreshMsgs()},12000);
  document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshMsgs()});
 }
+
+/* ---------- links in admin alert emails: ?go=reports opens that admin page after sign-in and PIN ---------- */
+{
+ const ok=['reports','support','members','joinreq','requests','content','home'];
+ try{const g=new URLSearchParams(location.search).get('go');if(g&&ok.includes(g)){sessionStorage.setItem('nc_go',g);history.replaceState(null,'',location.pathname)}}catch(e){}
+ window.tryGo=async function(){
+  let g=null;try{g=sessionStorage.getItem('nc_go')}catch(e){}
+  if(!g||!S.uid||!S.admin)return;
+  if(await mfaGate())return;
+  try{sessionStorage.removeItem('nc_go')}catch(e){}
+  S.stack=[];
+  try{if(g==='home')await ACT.adminhome();else await admGo(g)}catch(e){}
+ };
+ const _sync=sync;
+ sync=async function(){const r=await _sync.apply(this,arguments);setTimeout(()=>{try{tryGo()}catch(e){}},300);return r};
+}
