@@ -16,6 +16,7 @@ Object.keys(P).forEach(k=>{if(k!=='me')delete P[k]});
 
 /* ---------- translations for new text: [en, tr, pl, ru] ---------- */
 function N(o){Object.keys(o).forEach(k=>{D[k]=o[k]})}
+N({su_h:["Welcome. We're so glad you're here.","Hoş geldiniz. Aramızda olmanıza çok sevindik.","Witaj. Cieszymy się, że jesteś z nami.","Добро пожаловать. Мы рады вам."],su_d:["A warm, friendly space for expats, tourists, their friends and family, and anyone dreaming of North Cyprus.","Expat'lar, turistler, yakınları ve Kuzey Kıbrıs hayali kuranlar için sıcak ve samimi bir buluşma noktası.","Ciepła, przyjazna przestrzeń dla expatów, turystów, ich rodzin i przyjaciół oraz wszystkich, którzy marzą o Cyprze Północnym.","Тёплое, дружелюбное место для экспатов, туристов, их друзей и семей и всех, кто мечтает о Северном Кипре."],su_w:["We say hello to every new member personally, so your account may take a short while to open. We will email you as soon as you are in.","Her yeni üyeyi tek tek karşılıyoruz, bu yüzden hesabınızın açılması kısa bir süre alabilir. Hazır olunca size e-posta göndereceğiz.","Witamy każdego nowego członka osobiście, więc otwarcie konta może chwilę potrwać. Wyślemy Ci e-mail, gdy będzie gotowe.","Мы лично приветствуем каждого нового участника, поэтому открытие аккаунта может занять немного времени. Мы напишем вам, как только всё будет готово."]});
 N({tx_btn:["Translate","Çevir","Przetłumacz","Перевести"],tx_orig:["Show original","Orijinali göster","Pokaż oryginał","Показать оригинал"],tx_err:["Could not translate. Try again.","Çevrilemedi. Tekrar deneyin.","Nie udało się przetłumaczyć. Spróbuj ponownie.","Не удалось перевести. Попробуйте ещё раз."]});
 /* no built-in sample content: only real member and admin content is ever shown */
 [EV,CLUBS,UPD,EQ,CLIPS,POSTS,LISTINGS,DIR].forEach(a=>{a.length=0});
@@ -418,7 +419,7 @@ function grabSu(){
 }
 V.signup=function(){
  const u=S.su,biz=u.type==='biz';
- if(u.step===1)return {t:T('join_free'),b:`<div class="stack"><div class="hero"><h1 class="h1" style="max-width:100%">${T('tagline')}</h1><p class="mut" style="margin-top:8px">${F('welcome_free',{n:DB.cfg.free_months||3})}</p></div><h2 class="h3">${T('su_pick')}</h2>
+ if(u.step===1)return {t:T('join_free'),b:`<div class="stack"><div style="position:relative;background:linear-gradient(180deg,rgba(14,48,40,.25),rgba(14,48,40,.82)),url(/welcome/w1.jpg) center/cover;color:#fff;padding:92px 20px 20px;border-radius:22px;overflow:hidden"><h1 class="h1" style="max-width:100%;color:#fff">${T('su_h')}</h1><p style="margin-top:8px;color:#f1f8f6;font-size:16px;line-height:1.45">${T('su_d')}</p><p style="margin-top:8px;color:#d9ecec;font-size:14px">${F('welcome_free',{n:DB.cfg.free_months||3})}</p></div><div class="note g" style="margin-top:2px">${ic('check')}<div class="sm">${T('su_w')}</div></div><h2 class="h3">${T('su_pick')}</h2>
   <button class="opt ${biz?'':'on'}" data-act="sutype" data-id="ind"><span class="lf">${ic('user')}</span><span style="flex:1"><b>${T('su_ind')}</b><div class="sm mut">${T('su_ind_d')}</div></span></button>
   <button class="opt ${biz?'on':''}" data-act="sutype" data-id="biz"><span class="lf">${ic('bag')}</span><span style="flex:1"><b>${T('su_biz')}</b><div class="sm mut">${T('su_biz_d')}</div></span></button>
   <p class="xs mut">${ic('lock','s')} ${T('su_lock')}</p>
