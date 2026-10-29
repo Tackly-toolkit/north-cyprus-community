@@ -89,6 +89,8 @@ ${(()=>{const w=(ADM.members||[]).filter(m=>m.pending);if(!w.length)return '';co
  ${r('joinreq','Applications','Only used if sign-up is invitation only. New members to approve are in the red box at the top and under Members',0,ADM.jrn)}
  ${r('members','Members','Approve new members, search, lock, suspend',0,s.pending_members)}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
+ ${r('faults','Faults and mistakes','Members reporting something wrong, with screenshots',0,s.open_faults)}
+ ${r('ideas','Ideas','What members would like to see on the platform',0,s.open_ideas)}
  ${r('info','Places and useful contacts','Places to visit, pharmacies, muktars, government, airports and borders')}
  ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
  ${r('requests','"Other, please tell us" requests','New towns, areas and categories asked for',0,s.open_requests)}

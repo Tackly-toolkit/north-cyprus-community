@@ -230,7 +230,7 @@ async function refreshMsgs(){
 
 /* ---------- links in admin alert emails: ?go=reports opens that admin page after sign-in and PIN ---------- */
 {
- const ok=['reports','support','members','joinreq','requests','content','home'];
+ const ok=['reports','faults','ideas','support','members','joinreq','requests','content','home'];
  try{const g=new URLSearchParams(location.search).get('go');if(g&&(ok.includes(g)||/^member:[0-9a-f-]{36}$/.test(g))){sessionStorage.setItem('nc_go',g);history.replaceState(null,'',location.pathname)}}catch(e){}
  window.tryGo=async function(){
   let g=null;try{g=sessionStorage.getItem('nc_go')}catch(e){}
