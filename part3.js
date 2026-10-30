@@ -75,7 +75,7 @@ function feedV(){
  let h='<div class="stack">'+notes();
  h+=`<section><h2 class="h3">${T('friends')}</h2><div class="leaves">`+
   ['marek','olga','elif','john','anna'].map(k=>`<button class="leaf" data-act="push" data-v="person" data-id="${k}"><span class="lf" style="--h:${P[k].h}">${esc(P[k].i)}</span><span class="n">${esc(P[k].n.split(' ')[0])}</span></button>`).join('')+
-  `<button class="leaf inv" data-act="invite"><span class="lf">${ic('plus')}</span><span class="n">${T('invite')}</span></button></div></section>`;
+  (S.uid&&S.prof?`<button class="leaf inv" data-act="invite"><span class="lf">${ic('plus')}</span><span class="n">${T('invite')}</span></button>`:'')+`</div></section>`;
  if(isM()){
   h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="create">${av('me',40)}<span class="grow mut">${T('compose_ph')}</span>${ic('image','s')}</button>`;
   h+=checkin();
