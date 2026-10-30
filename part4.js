@@ -370,7 +370,6 @@ N({call:["Call","Ara","Zadzwoń","Позвонить"],chat:["Chat","Yaz","Napis
 N({sponsor:["Sponsored","Sponsorlu","Sponsorowane","Реклама"],open:["Open","Aç","Otwórz","Открыть"]});
 
 /* ---------- brand / links ---------- */
-ACT.invite=function(){copy(location.origin+'/')};
 
 /* ---------- auth screens ---------- */
 SH.join=()=>`<h2 class="h2">${T('j_t')}</h2><p class="mut" style="margin:6px 0 14px">${T('j_d')}</p><div class="stack"><button class="btn block" data-act="signup">${T('j_create')}</button><button class="btn soft block" data-act="signinsheet">${T('sign_in')}</button><button class="btn line block" data-act="sclose">${T('close')}</button></div>`;
@@ -448,7 +447,7 @@ ACT.sunext=async function(){
  const ok=u.name&&u.email&&u.pw&&u.pw.length>=8&&u.d&&u.t&&u.k&&u.agree&&(!biz||(u.biz&&u.cat));
  if(!ok){u.err=T('su_err');renderOv(true);return}
  u.err='';u.busy=true;renderOv(true);
- const meta={name:u.name,account_type:biz?'business':'member',district_id:u.d,town_id:(u.t==='__other'?'':u.t),area_id:(u.a==='__other'?'':u.a),invite_code:u.inv||'',locale:LANGS[S.L],connection:u.k||''};
+ const meta={name:u.name,account_type:biz?'business':'member',district_id:u.d,town_id:(u.t==='__other'?'':u.t),area_id:(u.a==='__other'?'':u.a),invite_code:u.inv||'',ref:refGet(),locale:LANGS[S.L],connection:u.k||''};
  if(biz){meta.biz_name=u.biz;meta.biz_cat=(u.cat&&u.cat!=='__other')?u.cat:'';meta.biz_addr=u.addr||'';meta.want_dir=!!u.dir}
  const {data,error}=await sb.auth.signUp({email:u.email,password:u.pw,options:{data:meta,emailRedirectTo:location.origin+'/'}});
  u.busy=false;
@@ -582,7 +581,7 @@ V.northmap=function(){
 };
 function footerV(){
  const c=DB.contact;
- return `<div class="foot"><button class="fx" data-act="footer" aria-expanded="${S.footer}" title="${T('footer')}" aria-label="${T('footer')}">${ic(S.footer?'up':'down')}</button>${S.footer?`<div class="fb card"><div class="row" style="flex-wrap:wrap;gap:16px"><a href="#" data-act="push" data-v="policy" data-id="about">${T('f_about')}</a><a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a><a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a><a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a><a href="#" data-act="push" data-v="policy" data-id="contact">${T('f_contact')}</a></div>${S.uid&&S.prof?`<div class="row" style="flex-wrap:wrap;gap:16px;margin-top:10px"><a href="#" data-act="faultopen">${T('fb_f_flt')}</a><a href="#" data-act="ideaopen">${T('fb_f_idea')}</a></div>`:''}</div>`:''}</div>`;
+ return `<div class="foot"><button class="fx" data-act="footer" aria-expanded="${S.footer}" title="${T('footer')}" aria-label="${T('footer')}">${ic(S.footer?'up':'down')}</button>${S.footer?`<div class="fb card"><div class="row" style="flex-wrap:wrap;gap:16px"><a href="#" data-act="push" data-v="policy" data-id="about">${T('f_about')}</a><a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a><a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a><a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a><a href="#" data-act="push" data-v="policy" data-id="contact">${T('f_contact')}</a></div>${S.uid&&S.prof?`<div class="row" style="flex-wrap:wrap;gap:16px;margin-top:10px"><a href="#" data-act="invite">${T('inv_t')}</a><a href="#" data-act="faultopen">${T('fb_f_flt')}</a><a href="#" data-act="ideaopen">${T('fb_f_idea')}</a></div>`:''}</div>`:''}</div>`;
 }
 
 /* ---------- Community marketplace ---------- */
@@ -858,6 +857,7 @@ function meV(){
   h+=acctCard();
   h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="person" data-id="me">${av('me',46)}<div class="grow"><b>${T('my_profile')}</b></div>${ic('right')}</button><button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="friends"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('users')}</span><div class="grow"><b>${T('fr_title')}</b><div class="sm mut">${frAcc().length}</div></div>${frIn().length?`<span class="pill red">${frIn().length}</span>`:ic('right')}</button>`;
   h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="inbox"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('msg')}</span><div class="grow"><b>${T('inbox')}</b></div>${S.unread?`<span class="pill red">${S.unread}</span>`:ic('right')}</button>`;
+  h+=invCard();
   h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="faultopen"><span class="lf" style="background:var(--rs);color:var(--r);width:46px;height:46px">${ic('tool')}</span><div class="grow"><b>${T('fb_flt_t')}</b><div class="xs mut">${T('fb_flt_d')}</div></div>${ic('right')}</button><button class="card row" style="width:100%;border:0;text-align:left" data-act="ideaopen"><span class="lf" style="background:var(--gs);color:var(--gd);width:46px;height:46px">${ic('zap')}</span><div class="grow"><b>${T('fb_idea_t')}</b><div class="xs mut">${T('fb_idea_d')}</div></div>${ic('right')}</button>`;
   if(S.admin)h+=`<button class="card row" style="width:100%;border:0;text-align:left" data-act="push" data-v="admin"><span class="lf" style="background:var(--rs);color:var(--r);width:46px;height:46px">${ic('shield')}</span><div class="grow"><b>${T('admin_t')}</b></div>${ic('right')}</button>`;
   h+=favCard();
@@ -1304,8 +1304,8 @@ function openDeepLink(){
   await sync({quiet:true});
   try{if(!localStorage.getItem('nc_soon')&&!S.uid&&!S.sheet){localStorage.setItem('nc_soon','1');openSheet({v:'soon'})}}catch(e){}
   openDeepLink();
-  const iv=new URLSearchParams(location.search).get('invite');
-  if(iv&&!S.uid){S.su={step:1,type:'ind',dir:true,inv:iv};push('signup')}
+  const iv=new URLSearchParams(location.search).get('invite'),rf=new URLSearchParams(location.search).get('ref');
+  if((iv||rf)&&!S.uid){S.su={step:1,type:'ind',dir:true,inv:iv||''};push('signup')}
  }catch(e){sbErr(e);render()}
 })();
 
