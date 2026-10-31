@@ -77,8 +77,6 @@ N({
  pay_left1:["Last day to pay","Ödemek için son gün","Ostatni dzień na opłatę","Последний день для оплаты"],
  pay_how:["Pay in cash as arranged, then the team marks your account as paid. If your account locks, it opens again as soon as the payment is recorded.","Ödemeyi anlaştığınız şekilde elden yapın, ekip hesabınızı ödendi olarak işaretler. Hesap kilitlenirse ödeme kaydedilir kaydedilmez yeniden açılır.","Zapłać gotówką, jak ustalono, a zespół oznaczy konto jako opłacone. Jeśli konto się zablokuje, odblokuje się zaraz po zapisaniu płatności.","Оплатите наличными, как договорились, и команда отметит аккаунт оплаченным. Если доступ заблокирован, он откроется сразу после записи платежа."],
  pay_fee:["Monthly fee: {f}","Aylık ücret: {f}","Opłata miesięczna: {f}","Ежемесячный взнос: {f}"],
- pend_t:["Thank you for joining","Katıldığınız için teşekkürler","Dziękujemy za dołączenie","Спасибо, что присоединились"],
- pend_d:["Your account is waiting for approval by the administrators. We approve new members within one working day and will email you as soon as you are in. You can message us through the chat bubble or by email.","Hesabınız yöneticilerin onayını bekliyor. Yeni üyeleri bir iş günü içinde onaylıyoruz ve onaylanır onaylanmaz e-posta göndereceğiz. Sohbet balonundan veya e-posta ile bize yazabilirsiniz.","Twoje konto czeka na zatwierdzenie przez administratorów. Zatwierdzamy nowych członków w ciągu jednego dnia roboczego i wyślemy e-mail. Możesz napisać do nas przez dymek czatu lub e-mailem.","Ваш аккаунт ожидает одобрения администраторов. Мы одобряем новых участников в течение одного рабочего дня и пришлём письмо. Вы можете написать нам через чат или по почте."],
  lock_t:["Your account is paused","Hesabınız duraklatıldı","Twoje konto jest wstrzymane","Ваш аккаунт приостановлен"],
  lock_d:["Your posts and details are safe. Message us through the chat bubble or by email and we will help.","Gönderileriniz ve bilgileriniz güvende. Sohbet balonundan veya e-posta ile bize yazın, yardımcı olalım.","Twoje wpisy i dane są bezpieczne. Napisz do nas przez dymek czatu lub e-mailem, pomożemy.","Ваши записи и данные в безопасности. Напишите нам через чат или по почте, и мы поможем."],
  susp_t:["Your account is suspended","Hesabınız askıya alındı","Twoje konto jest zawieszone","Ваш аккаунт заблокирован"],
@@ -283,7 +281,7 @@ async function sync(opts){
   const p=await sb.from('profiles').select('*').eq('id',S.uid).maybeSingle();S.prof=p.data;
   const a=await sb.rpc('my_account_state');S.acct=Array.isArray(a.data)?a.data[0]:a.data;
  }
- S.role=!S.prof?'visitor':(S.prof.account_type==='business'?'business':'individual');
+ S.role=!S.prof?'visitor':'individual';
  S.admin=!!(S.prof&&S.prof.role==='admin');
  if(S.uid){S.mfa=S.admin?await mfaState():null;if(await mfaGate()){setMe();render();return}}
 
@@ -299,20 +297,12 @@ async function sync(opts){
 async function postLogin(){
  const u=S.user;if(!u||!S.prof)return;
  const m=u.user_metadata||{};
- if(m.want_dir&&S.role==='business'){
-  const ex=await sb.from('directory').select('id').eq('owner',S.uid).limit(1);
-  if(!(ex.data||[]).length){
-   await sb.from('directory').insert({owner:S.uid,name:m.biz_name||S.prof.display_name,category_id:m.biz_cat||null,district_id:S.prof.district_id,town_id:S.prof.town_id,area_id:S.prof.area_id,address:m.biz_addr||null});
-  }
-  await sb.auth.updateUser({data:{want_dir:false}});
-  const dq=await sb.from('directory').select('*').order('name');S.dir=(dq.data||[]).map(mapDir);
- }
 }
 async function showLock(st){
  let c=DB.contact;
  const ct=await sb.rpc('contact_details');const row=Array.isArray(ct.data)?ct.data[0]:ct.data;if(row)c={email:row.email||''};
  DB.contact=c;
- const el=$('#lock'),susp=st==='suspended',pend=!susp&&!!(S.prof&&S.prof.pending);
+ const el=$('#lock'),susp=st==='suspended',pend=false;
  el.hidden=false;$('#app').hidden=true;$('#ov').hidden=true;$('#sh').hidden=true;
  el.innerHTML=`<div class="wrap" style="max-width:520px;padding-block:40px"><div class="stack"><div style="text-align:center"><div class="mark" style="margin:0 auto 14px;width:64px;height:64px">${ic(susp?'shield':'lock','l')}</div><h1 class="h1">${T(susp?'susp_t':pend?'pend_t':'lock_t')}</h1><p class="mut" style="margin-top:10px">${T(susp?'susp_d':pend?'pend_d':'lock_d')}</p></div>
  <div class="card stack">${contactRows(c)||`<p class="mut">${T('susp_d')}</p>`}</div>
@@ -417,20 +407,15 @@ function grabSu(){
  const ag=$('#su-ag');if(ag)u.agree=ag.checked;
 }
 V.signup=function(){
- const u=S.su,biz=u.type==='biz';
- if(u.step===1)return {t:T('join_free'),b:`<div class="stack"><div style="position:relative;background:linear-gradient(180deg,rgba(14,48,40,.25),rgba(14,48,40,.82)),url(/welcome/w1.jpg) center/cover;color:#fff;padding:92px 20px 20px;border-radius:22px;overflow:hidden"><h1 class="h1" style="max-width:100%;color:#fff">${T('su_h')}</h1><p style="margin-top:8px;color:#f1f8f6;font-size:16px;line-height:1.45">${T('su_d')}</p><p style="margin-top:8px;color:#d9ecec;font-size:14px">${F('welcome_free',{n:DB.cfg.free_months||3})}</p></div><div class="note g" style="margin-top:2px">${ic('check')}<div class="sm">${T('su_w')}</div></div><h2 class="h3">${T('su_pick')}</h2>
-  <button class="opt ${biz?'':'on'}" data-act="sutype" data-id="ind"><span class="lf">${ic('user')}</span><span style="flex:1"><b>${T('su_ind')}</b><div class="sm mut">${T('su_ind_d')}</div></span></button>
-  <button class="opt ${biz?'on':''}" data-act="sutype" data-id="biz"><span class="lf">${ic('bag')}</span><span style="flex:1"><b>${T('su_biz')}</b><div class="sm mut">${T('su_biz_d')}</div></span></button>
-  <p class="xs mut">${ic('lock','s')} ${T('su_lock')}</p>
+ const u=S.su,biz=false;
+ if(u.step===1)return {t:T('join_free'),b:`<div class="stack"><div style="position:relative;background:linear-gradient(180deg,rgba(14,48,40,.25),rgba(14,48,40,.82)),url(/welcome/w1.jpg) center/cover;color:#fff;padding:92px 20px 20px;border-radius:22px;overflow:hidden"><h1 class="h1" style="max-width:100%;color:#fff">${T('su_h')}</h1><p style="margin-top:8px;color:#f1f8f6;font-size:16px;line-height:1.45">${T('su_d')}</p><p style="margin-top:8px;color:#d9ecec;font-size:14px">${F('welcome_free',{n:DB.cfg.free_months||3})}</p></div>
   ${[['sc1t','sc1d','home'],['sc2t','sc2d','bag'],['sc3t','sc3d','vcheck']].map(c=>`<div class="sc"><span class="lf">${ic(c[2])}</span><div><b>${T(c[0])}</b><div class="sm mut">${T(c[1])}</div></div></div>`).join('')}
   <button class="btn block" data-act="sunext">${T('cont')}</button></div>`};
- if(u.step===2)return {t:T('join_free'),b:`<div class="stack"><span class="pill">${ic(biz?'bag':'user','s')}${T(biz?'su_biz':'su_ind')}</span>
+ if(u.step===2)return {t:T('join_free'),b:`<div class="stack">
   <div class="card"><input id="su-hp" name="website" tabindex="-1" autocomplete="off" aria-hidden="true" style="position:absolute;left:-9999px;width:1px;height:1px;opacity:0"><label class="f" for="su-n">${T('su_name')}</label><input id="su-n" value="${esc(u.name||'')}" maxlength="40" autocomplete="name">
-  ${biz?`<label class="f" for="su-b">${T('su_biz_name')}</label><input id="su-b" value="${esc(u.biz||'')}" maxlength="60">${catSel('su-b2','directory',{c:u.cat}).replace(/id="su-b2-c"/,'id="su-bc"').replace(/data-cat="su-b2"/,'data-cat="su-b2"')}<label class="f" for="su-ba">${T('su_addr')}</label><input id="su-ba" value="${esc(u.addr||'')}" maxlength="120">`:''}
   ${geoSel('sg',{d:u.d,t:u.t,a:u.a})}<label class="f" for="su-k">${T('ap_conn')}</label><select id="su-k"><option value="">${T('ap_pick')}</option>${['tourist','expat','family','other'].map(k=>`<option value="${k}"${u.k===k?' selected':''}>${T('ap_k_'+k)}</option>`).join('')}</select></div>
   <div class="card"><label class="f" for="su-e">${T('su_email')}</label><input id="su-e" type="email" inputmode="email" autocomplete="email" value="${esc(u.email||'')}"><label class="f" for="su-p">${T('pw')}</label><input id="su-p" type="password" autocomplete="new-password" value="${esc(u.pw||'')}">
   ${DB.cfg.signup_mode==='invite'?`<label class="f" for="su-i">${T('su_invite')}</label><input id="su-i" value="${esc(u.inv||'')}" maxlength="40"><p class="xs mut" style="margin-top:6px">${T('su_invite_d')}</p><button class="btn line block" style="margin-top:10px" data-act="applyopen">${T('ap_btn')}</button>`:''}</div>
-  ${biz?`<button class="opt ${u.dir?'on':''}" data-act="sudir"><span class="lf">${ic(u.dir?'check':'plus')}</span><span style="flex:1"><b>${T('su_dir')}</b><div class="sm mut">${T('su_dir_d')}</div></span></button>`:''}
   <label class="row" style="gap:10px;align-items:flex-start"><input id="su-ag" type="checkbox" style="width:22px;height:22px;margin-top:2px" ${u.agree?'checked':''}><span class="sm">${T('su_agree')} <a href="#" data-act="push" data-v="policy" data-id="terms">${T('f_terms')}</a>${isStandalone()?'':`<a href="#" data-act="push" data-v="app">${T('get_app')}</a>`} · <a href="#" data-act="push" data-v="policy" data-id="privacy">${T('f_priv')}</a> · <a href="#" data-act="push" data-v="policy" data-id="payment">${T('f_pay')}</a></span></label>
   ${u.err?`<div class="note">${ic('info')}<div class="sm">${esc(u.err)}</div></div>`:''}
   <button class="btn block" data-act="sunext" ${u.busy?'disabled':''}>${T('finish')}</button></div>`};
@@ -443,12 +428,11 @@ ACT.sunext=async function(){
  if(u.step!==2)return;
  grabSu();
  if(($('#su-hp')||{}).value){u.busy=false;renderOv(true);return}
- const biz=u.type==='biz';
+ const biz=false;
  const ok=u.name&&u.email&&u.pw&&u.pw.length>=8&&u.d&&u.t&&u.k&&u.agree&&(!biz||(u.biz&&u.cat));
  if(!ok){u.err=T('su_err');renderOv(true);return}
  u.err='';u.busy=true;renderOv(true);
- const meta={name:u.name,account_type:biz?'business':'member',district_id:u.d,town_id:(u.t==='__other'?'':u.t),area_id:(u.a==='__other'?'':u.a),invite_code:u.inv||'',ref:refGet(),locale:LANGS[S.L],connection:u.k||''};
- if(biz){meta.biz_name=u.biz;meta.biz_cat=(u.cat&&u.cat!=='__other')?u.cat:'';meta.biz_addr=u.addr||'';meta.want_dir=!!u.dir}
+ const meta={name:u.name,account_type:'member',district_id:u.d,town_id:(u.t==='__other'?'':u.t),area_id:(u.a==='__other'?'':u.a),invite_code:u.inv||'',ref:refGet(),locale:LANGS[S.L],connection:u.k||''};
  const {data,error}=await sb.auth.signUp({email:u.email,password:u.pw,options:{data:meta,emailRedirectTo:location.origin+'/'}});
  u.busy=false;
  if(error){u.err=DB.cfg.signup_mode==='invite'?T('su_invite_err'):error.message;renderOv(true);return}
@@ -480,7 +464,7 @@ ACT.cmtsend=async d=>{
 
 /* ---------- explore (no TFR-specific modules) ---------- */
 function exploreV(){
- const mods=(gtN()?[['guides','book',T('m_guides'),F('cnt_guides',{n:gtN()})]]:[]).concat([['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})],['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺'],['northmap','map',T('m_map'),'']].concat(infoOf('place').length?[['places','pin',T('m_places'),infoOf('place').length+'']]:[],infoOf('contact').length?[['contacts','phone',T('m_contacts'),infoOf('contact').length+'']]:[]));
+ const mods=(gtN()?[['guides','book',T('m_guides'),F('cnt_guides',{n:gtN()})]]:[]).concat([...(dirOn()?[['dirlist','pin',T('m_dir'),F('cnt_dir',{n:S.dir.filter(b=>b.status==='approved').length})]]:[]),['events','cal',T('m_events'),F('cnt_events',{n:S.meetups.length})],['clubs','users',T('m_clubs'),F('cnt_clubs',{n:DB.clubs.length})],['updates','bell',T('m_updates'),(S.upd||[]).length+''],['checklist','ck',T('m_check'),CK.length+' ✓'],['convert','card',T('m_convert'),'£ ⇄ ₺'],['northmap','map',T('m_map'),'']].concat(infoOf('place').length?[['places','pin',T('m_places'),infoOf('place').length+'']]:[],infoOf('contact').length?[['contacts','phone',T('m_contacts'),infoOf('contact').length+'']]:[]));
  return `<div class="stack">${notes()}<div class="hero"><h1 class="h1" style="max-width:85%">${T('tagline')}</h1><p style="margin-top:8px;max-width:85%" class="mut">${T('exp_hero_d')}</p></div>${bannerHtml('explore')}${featuredSpot()}
  <div class="grid2">${mods.map(m=>`<button class="mod" data-act="push" data-v="${m[0]}"><span class="lf">${ic(m[1])}</span><b>${m[2]}</b><small>${m[3]}</small></button>`).join('')}</div>
  ${appCard()}${footerV()}</div>`;
@@ -502,7 +486,6 @@ function bizContact(b){
  if(b.phone&&digits(b.phone))btns.push(`<a class="btn grow" href="tel:+${digits(b.phone)}">${ic('phone','s')}${T('biz_call')}</a>`);
  if(b.wa&&digits(b.wa))btns.push(`<a class="btn soft grow" href="https://wa.me/${digits(b.wa)}" target="_blank" rel="noopener">${ic('wa','s')}${T('whatsapp')}</a>`);
  if(btns.length)rows.push(`<div class="row">${btns.join('')}</div>`);
- if(b.who==='me')rows.push(`<button class="btn line block" data-act="bizedit" data-id="${b.id}">${ic('tool','s')}${T('biz_edit')}</button>`);
  return rows.length?`<div class="card stack">${rows.join('')}</div>`:'';
 }
 SH.bizedit=s=>{const b=S.dir.find(x=>x.id===s.id)||{};return `<h2 class="h2">${T('biz_edit')}</h2><div class="stack" style="margin-top:12px"><div><label class="f" for="be-p">${T('biz_phone')}</label><input id="be-p" type="tel" inputmode="tel" maxlength="30" value="${esc(b.phone||'')}"><label class="f" for="be-w">${T('biz_wa')}</label><input id="be-w" type="tel" inputmode="tel" maxlength="30" value="${esc(b.wa||'')}"><label class="f" for="be-u">${T('biz_web')}</label><input id="be-u" maxlength="200" value="${esc(b.web||'')}" placeholder="https://"><label class="f" for="be-h">${T('biz_hours')}</label><textarea id="be-h" maxlength="300" placeholder="${esc(T('biz_hours_ph'))}">${esc(b.hours||'')}</textarea><label class="f" for="be-a">${T('address')}</label><input id="be-a" maxlength="120" value="${esc(b.addr||'')}"></div><button class="btn block" data-act="bizeditsave" data-id="${s.id}">${T('save')}</button></div>`};
@@ -512,7 +495,9 @@ ACT.bizeditsave=async d=>{
  if(error)return toast(error.message);
  closeSheet();await loadContent();renderOv(true);toast(T('biz_saved'));
 };
+const dirOn=()=>!!(DB.cfg&&DB.cfg.directory_on);
 function featuredSpot(){
+ if(!dirOn())return '';
  const f=S.dir.filter(b=>b.status==='approved'&&b.feat);if(!f.length)return '';
  const b=f[Math.floor(Date.now()/864e5)%f.length];
  return `<button class="bn" style="width:100%;text-align:left" data-act="push" data-v="dir" data-id="${b.id}">${b.img?`<img class="bn-i" src="${esc(b.img)}" alt="">`:`<span class="bn-i bn-ph">${ic('star','l')}</span>`}<span class="bn-t"><span class="bn-tag">${T('featured')}</span><b>${esc(b.n)}</b><span class="bn-b">${esc(b.off||b.catName)}</span></span>${ic('right')}</button>`;
@@ -627,10 +612,11 @@ ACT.dellisting=async d=>{const {error}=await sb.from('listings').delete().eq('id
 
 /* ---------- directory (list only, no map) ---------- */
 V.dirlist=function(){
+ if(!dirOn())return {t:T('m_dir'),b:`<div class="card" style="text-align:center"><p class="mut">${T('none_dir')}</p></div>`};
  const top=cTop('directory'),dc=S.dcat&&top.some(c=>c.id===S.dcat)?S.dcat:'all',dd=S.ddist||'';
  const dtn=S.dtown||'';
  const ls=S.dir.filter(b=>b.status==='approved').filter(b=>dc==='all'||b.cat===dc||(cById(b.cat)&&cById(b.cat).parent_id===dc)).filter(b=>!dd||b.district===dd).filter(b=>!dtn||b.town===dtn).filter(b=>!S.doff||b.off).sort((a,b)=>(b.feat?1:0)-(a.feat?1:0));
- const mine=S.dir.filter(b=>b.who==='me'&&b.status!=='approved');
+ const mine=[];
  return {t:T('m_dir'),b:`<p class="mut" style="margin-bottom:10px">${T('dir_sub')}</p>${bannerHtml('directory')}
  ${S.dshow?`<button class="btn soft" style="align-self:flex-start;margin-bottom:10px" data-act="dback">${ic('left','s')}${T('ic_back')}</button>`:`<div class="grid2">${catTile('dcat','all',T('see_all'),S.dir.filter(b=>b.status==='approved').length,'list')}${catTile('doff','x',T('discounts'),S.dir.filter(b=>b.status==='approved'&&b.off).length,'gift')}${top.map(c=>catTile('dcat',c.id,cLbl(c),S.dir.filter(b=>b.status==='approved'&&(b.cat===c.id||(cById(b.cat)&&cById(b.cat).parent_id===c.id))).length,'bag')).join('')}</div>`}
  ${S.dshow?`<select id="dd" data-act-change="ddist" style="margin:10px 0" aria-label="${esc(T('su_district'))}"><option value="">${T('filter_area')}</option>${opts(gKids(null,'district'),dd,gOpt,r=>r.id)}</select>${dd?`<select id="dt" style="margin-bottom:10px" aria-label="${esc(T('su_town'))}"><option value="">${T('all_towns')}</option>${opts(gKids(dd,'town'),dtn,gOpt,r=>r.id)}</select>`:''}`:''}
@@ -838,7 +824,7 @@ ACT.repsend=async()=>{
 function index(){
  const j=a=>Array.isArray(a)?a.join(' '):String(a),r=[];
  GC.forEach(g=>g.it.forEach((it,i)=>{if(gtOf(g.id+':'+i))r.push({l:A(it),s:A(g.n),ic:g.ic,v:'guide',id:g.id+':'+i,h:j(it)})}));
- S.dir.filter(b=>b.status==='approved').forEach(b=>r.push({l:b.n,s:b.catName+' · '+b.area,ic:'pin',v:'dir',id:b.id,h:b.n+' '+b.area+' '+b.catName}));
+ if(dirOn())S.dir.filter(b=>b.status==='approved').forEach(b=>r.push({l:b.n,s:b.catName+' · '+b.area,ic:'pin',v:'dir',id:b.id,h:b.n+' '+b.area+' '+b.catName}));
  S.meetups.forEach(e=>r.push({l:e.t,s:T('m_events'),ic:'cal',v:'event',id:e.id,h:e.t+' '+e.where}));
  DB.clubs.forEach(c=>r.push({l:c.name,s:T('m_clubs'),ic:c.icon||'users',v:'club',id:c.id,h:c.name+' '+(c.blurb||'')}));
  S.listings.forEach(l=>r.push({l:l.t,s:T('mk_title'),ic:'tag',v:'listing',id:l.id,h:l.t+' '+l.area+' '+l.catName+' '+l.d}));

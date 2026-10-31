@@ -14,8 +14,7 @@ const aRow=(act,attrs,title,sub,right)=>`<button class="listrow" data-act="${act
 const aStatePill=m=>{
  if(m.suspended||m.state==='suspended')return '<span class="pill red">Suspended</span>';
  if(m.role==='admin')return '<span class="pill">Admin</span>';
- if(m.pending)return '<span class="pill red">Waiting for approval</span>';
- if(m.state==='locked')return '<span class="pill red">Locked</span>';
+  if(m.state==='locked')return '<span class="pill red">Locked</span>';
  if(m.state==='grace')return `<span class="pill red">Due · ${m.days_left} d</span>`;
  return '<span class="pill">Active</span>';
 };
@@ -44,7 +43,7 @@ async function admLoad(sec,x){
   ADM.held=await aok(sb.from('listings').select('id,title,description,author,hold_reason,created_at').eq('status','held').order('created_at',{ascending:false}));await loadPeople((ADM.held||[]).map(r=>r.author));
   ADM.reports=rows;ADM.prev=prev;await loadPeople(rows.map(r=>r.reporter));
  }
- if(sec==='directory'){ADM.dir=await aok(sb.from('directory').select('*').order('status',{ascending:false}).order('created_at',{ascending:false}))}
+ if(sec==='directory'){ADM.dir=await aok(sb.from('directory').select('*').order('status',{ascending:false}).order('created_at',{ascending:false}));ADM.settings=await aok(sb.from('app_settings').select('*').eq('id',1).single())}
  if(sec==='guides'){const g=await aok(sb.from('guide_texts').select('*'));ADM.gt={};g.forEach(x=>{ADM.gt[x.guide_key]=x})}
  if(sec==='sources'){ADM.src=await aok(sb.from('official_sources').select('*').order('created_at'));ADM.rev=await aok(sb.from('update_review').select('*').order('created_at',{ascending:false}).limit(60))}
  if(sec==='news'){ADM.gt=ADM.gt||{}}
@@ -82,18 +81,16 @@ V.admin=function(){
  const s=ADM.sum||{};
  const c=(n,l)=>`<div class="card" style="text-align:center;padding:12px 8px"><div class="h2">${n===undefined?'–':n}</div><div class="xs mut">${l}</div></div>`;
  const r=(sec,l,sub,view,n)=>aRow('admgo',`data-sec="${sec}" ${view?`data-view="${view}"`:''}`,l,sub,n?`<span class="pill red">${n}</span>`:undefined);
- return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${c(s.businesses,'Businesses')}${bill()?c(s.in_grace,'Payment due'):''}${c(s.locked,'Locked')}</div>
-${(()=>{const w=(ADM.members||[]).filter(m=>m.pending);if(!w.length)return '';const kl={tourist:'Tourist or planning a trip',expat:'Expat',family:'Family or friend of someone connected',other:'Other'};return `<div class="card stack" style="border:2px solid var(--r)"><b>New members waiting for approval (${w.length})</b><div class="xs mut">They cannot enter the community until you approve them.</div>${w.map(m=>`<div class="card stack" style="box-shadow:none;background:var(--bg)"><b style="overflow-wrap:anywhere">${esc(m.display_name||'(no name)')}</b><div class="xs mut" style="overflow-wrap:anywhere">${esc(m.email)} · ${kl[m.connection]||'connection not given'}</div><div class="row" style="flex-wrap:wrap">${aBtn('aapprove',`data-id="${m.id}"`,'Approve')}${aBtn('admgo',`data-sec="member" data-x="${m.id}"`,'Open','line')}</div></div>`).join('')}</div>`})()}
+ return {t:T('admin_t'),b:`<div class="stack"><div class="grid2" style="gap:10px">${c(s.members,'Members')}${bill()?c(s.in_grace,'Payment due'):''}${c(s.locked,'Locked')}</div>
 ${(()=>{const b=ADM.bk;if(!b)return '';const f=b.finished?new Date(b.finished):null;const age=f?(Date.now()-f.getTime())/36e5:null;const bad=!f||age>36||(b.errors&&b.errors.length);const when=f?f.toLocaleString('en-GB',{dateStyle:'medium',timeStyle:'short'}):'never';return `<div class="card" style="${bad?'border:2px solid var(--r)':''}"><b>Backup ${bad?'needs a look':'is fine'}</b><div class="xs mut">${f?`Last backup ${when}: ${b.tables} tables, ${b.rows} records, ${b.media_total} photos and files. ${b.snapshots} daily copies kept for 30 days. Stored encrypted in Backblaze, EU.`:'No backup has run yet.'}${age>36?' It is more than a day old.':''}${b.errors&&b.errors.length?' Problems: '+b.errors.join('; ').slice(0,300):''}</div></div>`})()}
  ${r('support','Chat messages','Members writing to you through the chat bubble',0,ADM.supn)}
  ${bill()?r('due','Payments due','Reminders, mark paid, lock, spreadsheet download','adm_due',s.in_grace):''}
- ${r('joinreq','Applications','Only used if sign-up is invitation only. New members to approve are in the red box at the top and under Members',0,ADM.jrn)}
- ${r('members','Members','Approve new members, search, lock, suspend',0,s.pending_members)}
+ ${r('members','Members','Search, lock, suspend',0,s.pending_members)}
  ${r('reports','Reports','Flagged posts, listings and members',0,s.open_reports)}
  ${r('faults','Faults and mistakes','Members reporting something wrong, with screenshots',0,s.open_faults)}
  ${r('ideas','Ideas','What members would like to see on the platform',0,s.open_ideas)}
  ${r('info','Places and useful contacts','Places to visit, pharmacies, muktars, government, airports and borders')}
- ${r('directory','Business directory','Approve, verify, edit',0,s.pending_directory)}
+ ${r('directory','Business directory','Add businesses, edit, feature, show or hide the directory',0,s.pending_directory)}
  ${r('requests','"Other, please tell us" requests','New towns, areas and categories asked for',0,s.open_requests)}
  ${r('invites','Sign-up and invites','Open or invitation only, invite codes')}
  ${r('banners','Banners','Pick the page for each banner. All off until you switch them on')}
@@ -117,7 +114,7 @@ ACT.push=function(d){if(d.v==='admin'&&S.admin){return ACT.adminhome()}return pu
 /* ---------- members ---------- */
 V.adm_members=function(){
  const f=S.amf||'all';
- const chips=[['all','All'],['pending','Waiting for approval'],...(bill()?[['grace','Payment due']]:[]),['locked','Locked'],['suspended','Suspended'],['business','Businesses'],['admin','Admins']];
+ const chips=[['all','All'],...(bill()?[['grace','Payment due']]:[]),['locked','Locked'],['suspended','Suspended'],['admin','Admins']];
  return {t:'Members',b:`<div class="stack"><input id="a-q" type="search" placeholder="Search name or email" value="${esc(S.amq||'')}" autocomplete="off"><div class="chips">${chips.map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="amf" data-id="${c[0]}">${c[1]}</button>`).join('')}</div><div id="a-list" class="stack">${memList()}</div></div>`};
 };
 function memList(){
@@ -125,8 +122,8 @@ function memList(){
  const ls=(ADM.members||[]).filter(m=>{
   if(q&&!((m.display_name||'')+' '+(m.email||'')).toLowerCase().includes(q))return false;
   if(f==='pending')return !!m.pending;if(f==='grace')return m.state==='grace';if(f==='locked')return m.state==='locked'&&!m.suspended;if(f==='suspended')return m.suspended;
-  if(f==='business')return m.account_type==='business';if(f==='admin')return m.role==='admin';return true});
- return `<div class="xs mut">${ls.length} of ${(ADM.members||[]).length}</div>`+ls.map(m=>aRow('admgo',`data-sec="member" data-x="${m.id}"`,esc(m.display_name||'(no name)'),`${esc(m.email)} · ${m.account_type==='business'?'Business':'Member'} · due ${aDate(m.due_on)}`,aStatePill(m)+ic('right'))).join('');
+  if(f==='admin')return m.role==='admin';return true});
+ return `<div class="xs mut">${ls.length} of ${(ADM.members||[]).length}</div>`+ls.map(m=>aRow('admgo',`data-sec="member" data-x="${m.id}"`,esc(m.display_name||'(no name)'),`${esc(m.email)} · Member · due ${aDate(m.due_on)}`,aStatePill(m)+ic('right'))).join('');
 }
 ACT.amf=d=>{S.amf=d.id;renderOv(true)};
 document.addEventListener('input',e=>{if(e.target.id==='a-q'){S.amq=e.target.value;const l=$('#a-list');if(l)l.innerHTML=memList()}});
@@ -137,11 +134,10 @@ V.adm_member=function(o){
  const place=areaLabel(m.district_id,m.town_id,m.area_id);
  return {t:esc(m.display_name||'Member'),b:`<div class="stack">
  <div class="card stack"><div class="row"><div class="grow" style="min-width:0"><h2 class="h2">${esc(m.display_name||'(no name)')}</h2><div class="sm mut" style="overflow-wrap:anywhere">${esc(m.email)}</div></div>${aStatePill(m)}</div>
- <div class="sm">${m.account_type==='business'?'Business':'Member'}${place?' · '+esc(place):''}</div>
+ <div class="sm">Member${place?' · '+esc(place):''}</div>
  <div class="sm mut">Joined ${aDate(m.joined_at)}${ADM.invby&&ADM.invby[m.id]?' · Invited by <b>'+esc(ADM.invby[m.id])+'</b>':''} · Free until ${aDate(m.free_until)}${m.paid_until?' · Paid until '+aDate(m.paid_until):''}</div>
  ${live()?`<div class="sm"><b>Next due: ${aDate(m.due_on)}</b>`:`<div class="sm"><b>Free member</b> · charging is off. If you switch it on, their next due date would be ${aDate(m.paid_until||m.free_until)}`}${live()&&m.state==='grace'?` · ${m.days_left} day(s) left before lock`:''}</div></div>
  ${bill()?`<div class="card stack"><b>Record a payment</b><div class="grid2" style="gap:10px"><div><label class="f" for="a-amt">Amount (TL)</label><input id="a-amt" type="number" inputmode="decimal" value="${esc(fee)}"></div><div><label class="f" for="a-mo">Months</label><select id="a-mo">${[1,2,3,6,12].map(n=>`<option value="${n}">${n}</option>`).join('')}</select></div></div><label class="f" for="a-nt">Note (optional)</label><input id="a-nt" maxlength="120" placeholder="e.g. cash, 14 Oct">${aBtn('apay',`${ic('check','s')}Record payment and open account`,`data-id="${m.id}"`,'')}</div>`:''}
- ${m.pending?`<div class="card stack" style="border:2px solid var(--r)"><b>Waiting for approval</b><div class="sm">Connection: ${({tourist:'Tourist or planning a trip',expat:'Expat',family:'Family or friend of someone connected',other:'Other'})[m.connection]||'not given'}</div><div class="xs mut">Approving opens their account and emails them a welcome. To decline, use Suspend (ban) or delete the account below.</div>${aBtn('aapprove','Approve member',`data-id="${m.id}"`)}</div>`:''}
  <div class="card stack"><b>Send a warning</b><div class="xs mut">Appears in their chat with the administrators and they get an alert. It is logged in the activity log.</div><textarea id="a-warn" maxlength="400" style="min-height:70px" placeholder="e.g. Please keep to the house rules. Listings that ask for money in advance are not allowed."></textarea>${aBtn('awarn','Send warning',`data-id="${m.id}"`)}</div>
  <div class="card stack"><b>Account control</b>
  <div class="row" style="flex-wrap:wrap">${aBtn('alock',m.manual_lock?'Remove manual lock':'Lock account now',`data-id="${m.id}" data-v="${m.manual_lock?0:1}"`)}${aBtn('asusp',m.suspended?'Reinstate':'Suspend (ban)',`data-id="${m.id}" data-v="${m.suspended?0:1}"`,m.suspended?'soft':'line')}</div>
@@ -320,11 +316,36 @@ ACT.areprm=async d=>{
 /* ---------- directory ---------- */
 V.adm_directory=function(){
  const ds=ADM.dir||[];
- return {t:'Business directory',b:`<div class="stack">${ds.length?ds.map(b=>`<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(b.name)}</b><div class="xs mut">${esc(cName(b.category_id))} · ${esc(areaLabel(b.district_id,b.town_id,b.area_id))}${b.address?' · '+esc(b.address):''}</div></div><span class="pill ${b.status==='approved'?'':'red'}">${b.status}</span></div>
+ const on=!!(ADM.settings&&ADM.settings.directory_on);
+ return {t:'Business directory',b:`<div class="stack"><div class="card"><div class="row"><div class="grow"><b>Show the directory to members</b><div class="sm mut">${on?'On: members see the Directory and the businesses below that are shown.':'Off: the Directory is hidden everywhere. Add businesses below, then switch this on when you are ready to launch it.'}</div></div>${aSw(on,'adiron','','Directory')}</div></div>
+ <div class="card stack"><b>Add a business</b><div class="xs mut">Only admins can add businesses. Members cannot.</div>
+ <label class="f" for="an-n">Business name</label><input id="an-n" maxlength="80">
+ ${catSel('an','directory',{})}
+ ${geoSel('an',{})}
+ <label class="f" for="an-a">Address</label><input id="an-a" maxlength="120">
+ <div class="grid2" style="gap:10px"><div><label class="f" for="an-p">Phone (with country code)</label><input id="an-p" maxlength="30" inputmode="tel"></div><div><label class="f" for="an-w">WhatsApp (with country code)</label><input id="an-w" maxlength="30" inputmode="tel"></div></div>
+ <label class="f" for="an-u">Website</label><input id="an-u" maxlength="200">
+ <label class="f" for="an-h">Opening times</label><input id="an-h" maxlength="300">
+ <label class="f" for="an-o">Offer for members (shows under Discounts)</label><input id="an-o" maxlength="100">
+ <label class="f" for="an-i">Photo or logo (optional)</label><input id="an-i" type="file" accept="image/*">
+ <label class="row" style="gap:10px;margin-top:6px"><input id="an-v" type="checkbox" style="width:22px;height:22px"><span class="sm">Mark as verified</span></label>
+ <label class="row" style="gap:10px"><input id="an-f" type="checkbox" style="width:22px;height:22px"><span class="sm">Feature this business</span></label>
+ ${aBtn('adirnew',`${ic('plus','s')}Add business`,'','')}</div>
+ ${ds.length?ds.map(b=>`<div class="card stack"><div class="row"><div class="grow" style="min-width:0"><b style="overflow-wrap:anywhere">${esc(b.name)}</b><div class="xs mut">${esc(cName(b.category_id))} · ${esc(areaLabel(b.district_id,b.town_id,b.area_id))}${b.address?' · '+esc(b.address):''}</div></div><span class="pill ${b.status==='approved'?'':'red'}">${b.status}</span></div>
   <label class="f" for="d-o-${b.id}">Offer shown to members (shows under Discounts)</label><input id="d-o-${b.id}" maxlength="100" value="${esc(b.offer||'')}">
   <div class="grid2" style="gap:10px"><div><label class="f" for="d-p-${b.id}">Phone (with country code)</label><input id="d-p-${b.id}" maxlength="30" value="${esc(b.phone||'')}"></div><div><label class="f" for="d-w-${b.id}">WhatsApp</label><input id="d-w-${b.id}" maxlength="30" value="${esc(b.whatsapp||'')}"></div></div>
   <label class="f" for="d-u-${b.id}">Website</label><input id="d-u-${b.id}" maxlength="200" value="${esc(b.website||'')}"><label class="f" for="d-h-${b.id}">Opening times</label><input id="d-h-${b.id}" maxlength="300" value="${esc(b.opening_hours||'')}"><label class="f" for="d-a-${b.id}">Address</label><input id="d-a-${b.id}" maxlength="120" value="${esc(b.address||'')}">
-  <div class="row" style="flex-wrap:wrap">${b.status!=='approved'?aBtn('adir',`data-id="${b.id}" data-s="approved"`,'Approve',''):aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Hide')}${b.status==='pending'?aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Reject','line'):''}${aBtn('adirv',`data-id="${b.id}" data-v="${b.verified?0:1}"`,b.verified?'Remove verified':'Mark verified')}${aBtn('adiro',`data-id="${b.id}"`,'Save details')}${aBtn('adirf',`data-id="${b.id}" data-v="${b.featured?0:1}"`,b.featured?'Remove featured':'Make featured','line')}${aBtn('adirdel',`data-id="${b.id}"`,ic('trash','s'),'line')}</div></div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No businesses yet.</p></div>'}</div>`};
+  <div class="row" style="flex-wrap:wrap">${b.status!=='approved'?aBtn('adir',`data-id="${b.id}" data-s="approved"`,'Show',''):aBtn('adir',`data-id="${b.id}" data-s="rejected"`,'Hide')}${aBtn('adirv',`data-id="${b.id}" data-v="${b.verified?0:1}"`,b.verified?'Remove verified':'Mark verified')}${aBtn('adiro',`data-id="${b.id}"`,'Save details')}${aBtn('adirf',`data-id="${b.id}" data-v="${b.featured?0:1}"`,b.featured?'Remove featured':'Make featured','line')}${aBtn('adirdel',`data-id="${b.id}"`,ic('trash','s'),'line')}</div></div>`).join(''):'<div class="card" style="text-align:center"><p class="mut">No businesses yet.</p></div>'}</div>`};
+};
+ACT.adiron=async()=>{const nv=!(ADM.settings&&ADM.settings.directory_on);await aok(sb.from('app_settings').update({directory_on:nv,updated_at:new Date().toISOString()}).eq('id',1));aLog('directory_switch',{on:nv});DB.cfg.directory_on=nv;toast(nv?'Directory is now visible to members':'Directory is now hidden');admReload();try{renderTop()}catch(e){}};
+ACT.adirnew=async()=>{
+ const name=val('an-n');if(!name)return toast('Add the business name');
+ const g=geoVals('an'),cat=val('an-s')||val('an-c');
+ if(!cat||cat==='__other')return toast('Choose a category');
+ let img=null;const f=($('#an-i')||{}).files&&$('#an-i').files[0];
+ if(f){const d=await readImg(f);if(d)img=await uploadDataUrl(d,'directory')}
+ await aok(sb.from('directory').insert({owner:S.uid,name,category_id:cat,district_id:g.d||null,town_id:(g.t&&g.t!=='__other')?g.t:null,area_id:(g.a&&g.a!=='__other')?g.a:null,address:val('an-a')||null,phone:val('an-p')||null,whatsapp:val('an-w')||null,website:val('an-u')||null,opening_hours:val('an-h')||null,offer:val('an-o')||null,photo_url:img,verified:!!($('#an-v')||{}).checked,featured:!!($('#an-f')||{}).checked,status:'approved'}));
+ aLog('directory_add',{name});toast('Business added');admReload();loadContent();
 };
 ACT.adir=async d=>{await aok(sb.from('directory').update({status:d.s}).eq('id',d.id));aLog('directory',{id:d.id,status:d.s});admReload();loadContent()};
 ACT.adirv=async d=>{await aok(sb.from('directory').update({verified:d.v==='1'}).eq('id',d.id));aLog('verify',{id:d.id,v:d.v});admReload();loadContent()};
