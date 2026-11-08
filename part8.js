@@ -51,3 +51,15 @@ admLoad=async function(sec,x){
  if(sec==='members'||sec==='member'){try{const q=await sb.rpc('admin_inviters');const mp={};(q.data||[]).forEach(z=>{if(z.by_name)mp[z.id]=z.by_name});ADM.invby=mp}catch(e){ADM.invby={}}}
  return r;
 };
+
+/* always-visible Invite: header button and a bar at the end of every page (signed-in members) */
+const _rt8=renderTop;
+renderTop=function(){
+ _rt8();
+ if(S.uid&&S.prof){const s=document.querySelector('#top .sosb');if(s)s.insertAdjacentHTML('beforebegin',`<button class="invtop" data-act="invite" aria-label="${T('inv_t')}">${ic('share','s')}${T('invite')}</button>`)}
+};
+const _rm8=renderMain;
+renderMain=function(){
+ _rm8();
+ if(S.uid&&S.prof)$('#main').insertAdjacentHTML('beforeend',`<div class="invbar"><button class="btn" data-act="invite">${ic('share','s')}${T('inv_t')}</button></div>`);
+};
