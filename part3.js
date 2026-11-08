@@ -6,7 +6,7 @@ const T=k=>{const v=D[k];return v?v[S.L]:k};
 const F=(k,o)=>T(k).replace(/\{(\w+)\}/g,(m,x)=>o[x]);
 const A=x=>Array.isArray(x)?x[S.L]:x;
 const ic=(n,c)=>`<svg class="ic ${c||''}" aria-hidden="true"><use href="#i-${n}"/></svg>`;
-const isM=()=>S.role!=='visitor';
+const isM=()=>S.role!=='visitor'||!!S.uid;
 function av(k,sz){const p=P[k];return `<span class="ring${p.biz||p.org?' bz':''}" style="--s:${sz||44}px"><span class="av" style="--h:${p.h}">${p.img?`<img src="${p.img}" alt="">`:esc(p.i)}</span></span>`}
 function ago(m){return m<60?F('ago_m',{n:Math.max(1,m)}):m<1440?F('ago_h',{n:Math.round(m/60)}):F('ago_d',{n:Math.round(m/1440)})}
 function fdate(iso,long){try{return new Date(iso+'T12:00:00').toLocaleDateString(LOC[S.L],long?{weekday:'long',day:'numeric',month:'long',year:'numeric'}:{day:'numeric',month:'short',year:'numeric'})}catch(e){return iso}}
@@ -67,7 +67,7 @@ function render(){document.documentElement.lang=LANGS[S.L];applyTheme();renderTo
 /* ---------- feed ---------- */
 function notes(){
  let h=payNote();
- if(S.role==='visitor')h+=`<div class="note g">${ic('info')}<div style="flex:1"><div>${T('visitor_bar')}</div><button class="btn block" style="margin-top:10px;min-height:40px" data-act="signup">${ic('user','s')}${T('join_free')}</button></div></div>`;
+ if(!isM())h+=`<div class="note g">${ic('info')}<div style="flex:1"><div>${T('visitor_bar')}</div><button class="btn block" style="margin-top:10px;min-height:40px" data-act="signup">${ic('user','s')}${T('join_free')}</button></div></div>`;
  if(S.role==='business'&&!S.verified)h+=`<div class="note sticky">${ic('shield')}<div><b>${T('verify_t')}</b><div class="sm">${T('verify_d')}</div></div></div>`;
  return h+bannerHtml('top');
 }
@@ -81,9 +81,9 @@ function feedV(){
   h+=checkin();
  }
  const list=S.posts.slice().sort((a,b)=>a.m-b.m);
- const lim=S.role==='visitor'?3:list.length;
+ const lim=!isM()?3:list.length;
  list.slice(0,lim).forEach(p=>h+=post(p));
- if(S.role==='visitor'){
+ if(!isM()){
   h+=`<div class="gate"><div class="blur" aria-hidden="true">${post(list[3]).replace(/data-act/g,'data-x').replace(/href=/g,'data-h=')}</div><div class="gc"><div><h3 class="h2">${T('gate_t')}</h3><p class="mut" style="margin:6px 0 12px">${T('gate_d')}</p><button class="btn block" data-act="signup">${T('join_free')}</button></div></div></div>`;
  }else{
   h+=`<div class="card" style="text-align:center"><div class="mark" style="margin:0 auto 8px;width:44px;height:44px">${ic('check','l')}</div><div class="mut">${T('caught')}</div><button class="btn soft" style="margin-top:12px" data-act="refresh">${ic('refresh','s')}${T('refresh')}</button><p class="xs mut" style="margin-top:12px">${T('member_note')}</p></div>`;

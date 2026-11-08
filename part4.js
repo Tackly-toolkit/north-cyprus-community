@@ -273,14 +273,20 @@ async function loadContent(){
 }
 
 /* ---------- session / account state ---------- */
+let SYNC_N=0;
 async function sync(opts){
  opts=opts||{};
+ const me=++SYNC_N;
  const {data:{session}}=await sb.auth.getSession();
- S.uid=session?session.user.id:null;S.user=session?session.user:null;S.prof=null;S.acct=null;
- if(S.uid){
-  const p=await sb.from('profiles').select('*').eq('id',S.uid).maybeSingle();S.prof=p.data;
-  const a=await sb.rpc('my_account_state');S.acct=Array.isArray(a.data)?a.data[0]:a.data;
+ if(me!==SYNC_N)return;
+ const uid=session?session.user.id:null,usr=session?session.user:null;let prof=null,acct=null;
+ if(uid){
+  let p=await sb.from('profiles').select('*').eq('id',uid).maybeSingle();prof=p.data;
+  if(!prof){await new Promise(r=>setTimeout(r,900));p=await sb.from('profiles').select('*').eq('id',uid).maybeSingle();prof=p.data}
+  const a=await sb.rpc('my_account_state');acct=Array.isArray(a.data)?a.data[0]:a.data;
  }
+ if(me!==SYNC_N)return;
+ S.uid=uid;S.user=usr;S.prof=prof;S.acct=acct;
  S.role=!S.prof?'visitor':'individual';
  S.admin=!!(S.prof&&S.prof.role==='admin');
  if(S.uid){S.mfa=S.admin?await mfaState():null;if(await mfaGate()){setMe();render();return}}
@@ -1267,9 +1273,9 @@ function feedV(){
  if(isM())h+=`<div class="chips">${[['all',T('ff_all')],['friends',T('ff_friends')]].map(c=>`<button class="chip ${f===c[0]?'on':''}" data-act="ff" data-id="${c[0]}">${c[1]}</button>`).join('')}</div>`;
  const list=feedItems();
  if(!list.length)h+=`<div class="card" style="text-align:center"><p class="mut">${T(f==='friends'?'feed_empty_f':'none_posts')}</p></div>`;
- const lim=S.role==='visitor'?3:list.length;
+ const lim=!isM()?3:list.length;
  list.slice(0,lim).forEach(p=>{h+=post(p)});
- if(S.role==='visitor'&&list.length>lim)h+=`<div class="card" style="text-align:center"><h3 class="h2">${T('gate_t')}</h3><p class="mut" style="margin:6px 0 12px">${T('gate_d')}</p><button class="btn block" data-act="signup">${T('join_free')}</button></div>`;
+ if(!isM()&&list.length>lim)h+=`<div class="card" style="text-align:center"><h3 class="h2">${T('gate_t')}</h3><p class="mut" style="margin:6px 0 12px">${T('gate_d')}</p><button class="btn block" data-act="signup">${T('join_free')}</button></div>`;
  else if(S.role!=='visitor'&&list.length)h+=`<div class="card" style="text-align:center"><div class="mark" style="margin:0 auto 8px;width:44px;height:44px">${ic('check','l')}</div><div class="mut">${T('caught')}</div><button class="btn soft" style="margin-top:12px" data-act="refresh">${ic('refresh','s')}${T('refresh')}</button></div>`;
  return h+'</div>';
 }
