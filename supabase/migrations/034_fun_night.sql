@@ -1225,3 +1225,6 @@ begin
     set qty = excluded.qty, status = 'reserved', expires_at = excluded.expires_at, paid_at = null, paid_by = null, amount = null, receipt = null, passcode = null, in_cyprus = true, rounds_paid = 1, created_at = now();
   return jsonb_build_object('ok', true);
 end $$;
+
+-- invitation wording: points to the top-bar button and the special link (fun_announce re-created with this message)
+-- 'You are invited. Tap the 🎉 Fun Night button at the top of the app to reserve your place, or open ncyprusconnect.com/#fun'

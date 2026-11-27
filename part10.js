@@ -73,23 +73,33 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fn-rtk.out{opacity:.35;filter:grayscale(1)}.fn-rtk.in{box-shadow:0 0 0 3px #3fd17c,0 5px 10px rgba(0,0,0,.3)}
 .fn-join{background:#fff8ea;color:#3a2a1e;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 8px 16px rgba(0,0,0,.35)}
 .fn-join h4{margin:0 0 6px;font:800 20px var(--hf)}.fn-join p{margin:0 0 10px}
+.fntop{height:36px;padding:0 10px;border-radius:18px;border:0;background:#f6c343;color:#3a2a1e;font:700 13px var(--bf);display:flex;align-items:center;gap:5px;margin-left:2px;flex:none}.fntop.open{animation:fnglow 1.6s ease-in-out infinite}@keyframes fnglow{50%{box-shadow:0 0 0 5px rgba(246,195,67,.35)}}@media(max-width:560px){#top.hasfn .logo .t{display:none}.fntop b{display:none}.fntop{padding:0 9px;font-size:17px}}
 .fn-seg{display:flex;gap:8px;flex-wrap:wrap}.fn-seg button{flex:1;min-width:64px}
 </style>`);
 
 /* ---------- loading the list, entry points ---------- */
 async function funLoad(force){
  if(!S.uid)return;if(!force&&Date.now()-FUN.at<45000)return;FUN.at=Date.now();
- try{FUN.on=!!(await frpc('fun_on'));FUN.list=FUN.on?(await frpc('fun_list'))||[]:[]}catch(e){FUN.on=false;FUN.list=[]}
- const el=document.getElementById('fn-entry');if(el)el.outerHTML=funEntry();
+ try{FUN.list=(await frpc('fun_list'))||[];FUN.on=FUN.list.length>0}catch(e){FUN.on=false;FUN.list=[]}
+ funTop();
+ if(!FUN.linked&&location.hash==='#fun'){FUN.linked=1;try{history.replaceState(null,'',location.pathname+location.search)}catch(e){}if(FUN.on&&FUN.list.length){const go=k=>{if(S.stack.length||k>6)return;funGo();setTimeout(()=>go(k+1),700)};setTimeout(()=>go(0),400)}}
 }
-function funEntry(){
- if(!FUN.on||!FUN.list.length)return '<div id="fn-entry"></div>';
- const mine=FUN.list.find(n=>n.mine&&n.mine.status==='paid'&&(n.status==='doors'||n.status==='live')),n=mine||FUN.list[0];
- return `<div id="fn-entry" class="fn-hero"><h3>Fun Night</h3><p>${mine?`The doors are open for ${esc(n.name)}.`:`${esc(n.name)} · ${fWhen(n.starts_at)}`}</p><button class="btn" data-act="funopen">${mine?'Go to the door':'See the nights'}</button></div>`;
+/* the only way in: a small button in the top bar, shown only to invited members while Fun Night is switched on (or the special link, #fun) */
+function funTop(){
+ const old=document.querySelector('#top .fntop'),show=S.uid&&S.prof&&FUN.on&&FUN.list.length;
+ const tp=document.getElementById('top');if(tp)tp.classList.toggle('hasfn',!!show);
+ if(!show){if(old)old.remove();return}
+ const open=FUN.list.some(n=>n.mine&&n.mine.status==='paid'&&(n.status==='doors'||n.status==='live'));
+ const h=`<button class="fntop${open?' open':''}" data-act="funopen" aria-label="Fun Night"><span aria-hidden="true">🎉</span><b>Fun Night</b></button>`;
+ if(old){old.outerHTML=h;return}
+ const at=document.querySelector('#top .invtop')||document.querySelector('#top .sosb');if(at)at.insertAdjacentHTML('beforebegin',h);
 }
+function funGo(){const d=FUN.list.filter(n=>n.mine&&n.mine.status==='paid'&&(n.status==='doors'||n.status==='live'));if(d.length===1)push('fundoor',{id:d[0].id});else push('fun')}
+const _rt10=renderTop;
+renderTop=function(){_rt10();funTop()};
 const _rm10=renderMain;
-renderMain=function(){_rm10();if(S.uid&&S.prof&&(S.tab==='feed'||S.tab==='explore')){const m=$('#main .stack');if(m)m.insertAdjacentHTML('afterbegin',funEntry());funLoad()}};
-ACT.funopen=async()=>{await funLoad(true);push('fun')};
+renderMain=function(){_rm10();if(S.uid&&S.prof)funLoad()};
+ACT.funopen=async()=>{await funLoad(true);if(FUN.on&&FUN.list.length)funGo()};
 
 V.fun=function(){
  const L=FUN.list;
