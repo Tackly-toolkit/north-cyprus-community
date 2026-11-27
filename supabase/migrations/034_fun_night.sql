@@ -1129,3 +1129,99 @@ begin
                 from public.fun_claims c join public.profiles p on p.id = c.user_id where c.night_id = p_night order by c.created_at desc limit 1),
     'now', now());
 end $$;
+
+-- Fun Night is by invitation: a member only sees a night once an admin has announced it to them (or they already hold a place)
+create table if not exists public.fun_invites (
+  night_id uuid not null references public.fun_nights(id) on delete cascade,
+  user_id uuid not null references public.profiles(id) on delete cascade,
+  invited_at timestamptz not null default now(),
+  primary key (night_id, user_id)
+);
+alter table public.fun_invites enable row level security;
+drop policy if exists fun_invites_admin on public.fun_invites;
+create policy fun_invites_admin on public.fun_invites for all using (public.is_admin()) with check (public.is_admin());
+
+create or replace function public.fun_can_see(p_night uuid) returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.is_admin()
+      or exists (select 1 from public.fun_invites i where i.night_id = p_night and i.user_id = auth.uid())
+      or exists (select 1 from public.fun_reservations r where r.night_id = p_night and r.user_id = auth.uid() and r.status in ('reserved','paid'))
+$$;
+revoke all on function public.fun_can_see(uuid) from public, anon, authenticated;
+
+create or replace function public.fun_visible() returns boolean
+language sql stable security definer set search_path = public as $$
+  select public.is_admin()
+      or ((coalesce((select fun_night_on from public.app_settings where id = 1), false)
+           or exists (select 1 from public.fun_testers t where t.user_id = auth.uid()))
+          and exists (select 1 from public.fun_nights n
+                       where (n.status in ('sales','doors','live') or (n.status = 'closed' and n.starts_at > now() - interval '12 hours'))
+                         and (exists (select 1 from public.fun_invites i where i.night_id = n.id and i.user_id = auth.uid())
+                           or exists (select 1 from public.fun_reservations r where r.night_id = n.id and r.user_id = auth.uid() and r.status in ('reserved','paid')))))
+$$;
+
+create or replace function public.fun_list() returns jsonb
+language plpgsql security definer set search_path = public as $function$
+declare out jsonb;
+begin
+  if auth.uid() is null or not public.fun_visible() then return '[]'::jsonb; end if;
+  perform public.fun_expire();
+  select coalesce(jsonb_agg(x order by (x->>'starts_at')), '[]'::jsonb) into out from (
+    select jsonb_build_object(
+      'id', n.id, 'name', n.name, 'game', n.game, 'status', n.status, 'starts_at', n.starts_at,
+      'price_text', n.price_text, 'pay_info', n.pay_info, 'max_tickets_each', n.max_tickets_each,
+      'prizes', n.prizes, 'host_name', n.host_name, 'host_voice', n.host_voice,
+      'players', (select count(*) from public.fun_reservations r where r.night_id = n.id and r.status in ('reserved','paid')),
+      'max_players', n.max_players,
+      'mine', (select jsonb_build_object('status', r.status, 'qty', r.qty, 'expires_at', r.expires_at, 'passcode', case when r.status = 'paid' then r.passcode end)
+                 from public.fun_reservations r where r.night_id = n.id and r.user_id = auth.uid()),
+      'seated', exists (select 1 from public.fun_seated s where s.night_id = n.id and s.user_id = auth.uid())
+    ) x
+    from public.fun_nights n
+    where (n.status in ('sales','doors','live') or (n.status = 'closed' and n.starts_at > now() - interval '12 hours'))
+      and public.fun_can_see(n.id)
+  ) q;
+  return out;
+end $function$;
+
+create or replace function public.fun_announce(p_night uuid, p_body text, p_users uuid[]) returns integer
+language plpgsql security definer set search_path = public as $function$
+declare n public.fun_nights; u uuid; c int := 0; msg text;
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  if char_length(trim(coalesce(p_body,''))) < 3 then raise exception 'Write a short message first.'; end if;
+  select * into n from public.fun_nights where id = p_night;
+  if not found then raise exception 'Choose an event first.'; end if;
+  msg := '🎉 ' || n.name || ' · ' || to_char(n.starts_at at time zone 'Asia/Famagusta', 'FMDay FMDD FMMonth, HH24:MI') || E'\n\n' || left(trim(p_body), 700)
+         || E'\n\n' || 'Open Fun Night in the app to reserve your place.';
+  for u in select p.id from public.profiles p where not p.suspended and p.id <> auth.uid() and (p_users is null or p.id = any(p_users)) loop
+    insert into public.fun_invites(night_id, user_id) values (p_night, u) on conflict do nothing;
+    perform public.fun_tell(u, msg, n.name, left(trim(p_body), 110));
+    c := c + 1;
+  end loop;
+  insert into public.audit_log(actor, action, detail) values (auth.uid(), 'fun_announce', jsonb_build_object('night', p_night, 'sent', c, 'all', p_users is null));
+  return c;
+end $function$;
+
+create or replace function public.fun_reserve(p_night uuid, p_qty int, p_in_cyprus boolean) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare n public.fun_nights; cnt int; r public.fun_reservations;
+begin
+  if auth.uid() is null or not public.fun_visible() or not public.fun_can_see(p_night) then raise exception 'Not available'; end if;
+  if not coalesce(p_in_cyprus, false) then raise exception 'Fun Night is for people in Cyprus. Please confirm you are in Cyprus.'; end if;
+  if exists (select 1 from public.fun_round_joins j where j.user_id = auth.uid() and j.owes and j.settled_at is null) then
+    raise exception 'You still have an extra round to pay for from last time. Please settle it with Chris or Natalie, then reserve again.'; end if;
+  select * into n from public.fun_nights where id = p_night for update;
+  if not found or n.status <> 'sales' then raise exception 'Tickets are not on sale for this night.'; end if;
+  if p_qty is null or p_qty < 1 or p_qty > n.max_tickets_each then raise exception 'Choose between 1 and % tickets.', n.max_tickets_each; end if;
+  perform public.fun_expire();
+  select * into r from public.fun_reservations where night_id = p_night and user_id = auth.uid();
+  if found and r.status in ('reserved','paid') then raise exception 'You already have a reservation for this night.'; end if;
+  select count(*) into cnt from public.fun_reservations where night_id = p_night and status in ('reserved','paid');
+  if cnt >= n.max_players then raise exception 'This night is full.'; end if;
+  insert into public.fun_reservations(night_id, user_id, qty, status, expires_at, in_cyprus)
+  values (p_night, auth.uid(), p_qty, 'reserved', least(now() + interval '2 days', n.starts_at), true)
+  on conflict (night_id, user_id) do update
+    set qty = excluded.qty, status = 'reserved', expires_at = excluded.expires_at, paid_at = null, paid_by = null, amount = null, receipt = null, passcode = null, in_cyprus = true, rounds_paid = 1, created_at = now();
+  return jsonb_build_object('ok', true);
+end $$;
