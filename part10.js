@@ -173,8 +173,9 @@ function funNext(){
  const f=job.list.shift();if(f===undefined){FUN.q.shift();if(job.then)try{job.then()}catch(e){}return funNext()}
  if(typeof f==='number')return setTimeout(funNext,f);
  if(typeof f==='function'){try{f()}catch(e){}return funNext()}
- const a=FAUD[f]||(FAUD[f]=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3'));a.volume=FUN.vol;a.currentTime=0;let done=false;const go=()=>{if(done)return;done=true;setTimeout(funNext,120)};
- a.onended=go;a.onerror=go;a.play().catch(go);setTimeout(go,9000);
+ const a=FAUD[f]||(FAUD[f]=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3'));a.volume=FUN.vol;a.currentTime=0;let done=false,wd=0;const go=()=>{if(done)return;done=true;clearTimeout(wd);setTimeout(funNext,120)};
+ const arm=()=>{if(done)return;clearTimeout(wd);const d=a.duration;wd=setTimeout(go,isFinite(d)&&d>0?d*1000+2500:30000)};
+ a.onended=go;a.onerror=go;a.onloadedmetadata=arm;arm();a.play().catch(go);
 }
 function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
 function funPre(list){list.forEach(f=>{if(!f||FAUD[f])return;try{const a=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3');a.preload='auto';a.load();FAUD[f]=a}catch(e){}})}
