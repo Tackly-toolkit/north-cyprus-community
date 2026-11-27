@@ -197,7 +197,7 @@ V.funroom=function(){
  const mt=Math.min(st.my_table||1,R.t.length),tb=R.t[mt-1],big=R.t.length>1;
  let tf='';if(big&&FUN.zoom&&tb){const cx=tb.reduce((a,p)=>a+p[0],0)/tb.length/12,cy=tb.reduce((a,p)=>a+p[1]-30,0)/tb.length/8.96,z={medium:1.7,large:2.2,xl:2.6}[st.room]||2;tf=`transform:scale(${z}) translate(${Math.max(-(100-100/z),Math.min(0,50/z-cx))}%,${Math.max(-(100-100/z),Math.min(0,50/z-cy))}%)`}
  const extra=st.seats.filter(x=>x.table>R.t.length);
- const talkOn=FUN.talk.on,canTalk=s.talk!==false,quiet=!!s.quiet;
+ const talkOn=FUN.talk.on,canTalk=s.talk===true,quiet=!!s.quiet;
  let game='';
  if(st.game==='bingo'){
   const last=st.calls[st.calls.length-1],stage=s.stage||1,rd=st.round||1,need=rd>1&&!st.joined,qty=st.my_qty||0,cost=(+st.price_amount||0)*qty;
@@ -278,8 +278,8 @@ function funTalkOff(){const tk=FUN.talk;if(tk.ch){try{tk.ch.send({type:'broadcas
 ACT.funmic=()=>{FUN.talk.mic=!FUN.talk.mic;funTalkRules();renderOv(true)};
 function funDuck(on){FUN.talk.duck=on;funTalkRules()}
 function funTalkRules(){
- const tk=FUN.talk;if(!tk.on)return;const s=(FUN.st&&FUN.st.state)||{},me=FUN.st&&FUN.st.me,quiet=!!s.quiet||s.talk===false,hm=(s.muted||[]).includes(me);
- if(s.talk===false){funTalkOff();return}
+ const tk=FUN.talk;if(!tk.on)return;const s=(FUN.st&&FUN.st.state)||{},me=FUN.st&&FUN.st.me,quiet=!!s.quiet||s.talk!==true,hm=(s.muted||[]).includes(me);
+ if(s.talk!==true){funTalkOff();return}
  if(tk.stream)tk.stream.getAudioTracks().forEach(t=>t.enabled=tk.mic&&!quiet&&!hm);
  Object.keys(tk.peers).forEach(id=>{const a=tk.peers[id].a;a.muted=quiet||!!tk.muted[id]||(s.muted||[]).includes(id);a.volume=tk.duck?.25:1});
 }
