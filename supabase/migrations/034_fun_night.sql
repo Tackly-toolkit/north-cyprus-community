@@ -1228,3 +1228,140 @@ end $$;
 
 -- invitation wording: points to the top-bar button and the special link (fun_announce re-created with this message)
 -- 'You are invited. Tap the 🎉 Fun Night button at the top of the app to reserve your place, or open ncyprusconnect.com/#fun'
+
+create or replace function public.fun_announce(p_night uuid, p_body text, p_users uuid[]) returns integer
+language plpgsql security definer set search_path = public as $function$
+declare n public.fun_nights; u uuid; c int := 0; msg text;
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  if char_length(trim(coalesce(p_body,''))) < 3 then raise exception 'Write a short message first.'; end if;
+  select * into n from public.fun_nights where id = p_night;
+  if not found then raise exception 'Choose an event first.'; end if;
+  msg := '🎉 ' || n.name || ' · ' || to_char(n.starts_at at time zone 'Asia/Famagusta', 'FMDay FMDD FMMonth, HH24:MI') || E'\n\n' || left(trim(p_body), 700)
+         || E'\n\n' || 'You are invited. Tap the 🎉 Fun Night button at the top of the app to reserve your place, or open ncyprusconnect.com/#fun';
+  for u in select p.id from public.profiles p where not p.suspended and p.id <> auth.uid() and (p_users is null or p.id = any(p_users)) loop
+    insert into public.fun_invites(night_id, user_id) values (p_night, u) on conflict do nothing;
+    perform public.fun_tell(u, msg, n.name, left(trim(p_body), 110));
+    c := c + 1;
+  end loop;
+  insert into public.audit_log(actor, action, detail) values (auth.uid(), 'fun_announce', jsonb_build_object('night', p_night, 'sent', c, 'all', p_users is null));
+  return c;
+end $function$;
+
+-- Traditional bingo booklet: one page is a strip of six cards that together hold every number from 1 to 90 exactly once
+create or replace function public.fun_make_strip() returns jsonb
+language plpgsql volatile set search_path = public as $$
+declare cnt int[]; need int[]; ext int[] := array[3,4,4,4,4,4,4,4,5];
+ c int; k int; t int; ok boolean; tries int := 0; ptr int[]; g int[]; rws int[]; nums int[]; rs int[]; i int; res jsonb; card jsonb; cols jsonb;
+begin
+ loop
+  tries := tries + 1; if tries > 300 then raise exception 'Could not build a booklet'; end if;
+  cnt := array_fill(1, array[54]); need := array_fill(6, array[6]); ok := true;
+  for c in 1..9 loop
+   for k in 1..ext[c] loop
+    t := null;
+    select x into t from generate_series(1,6) x where need[x] > 0 and cnt[(x-1)*9+c] < 3 order by need[x] desc, random() limit 1;
+    if t is null then ok := false; exit; end if;
+    cnt[(t-1)*9+c] := cnt[(t-1)*9+c] + 1; need[t] := need[t] - 1;
+   end loop;
+   exit when not ok;
+  end loop;
+  continue when not ok;
+  ptr := array_fill(0, array[9]); res := '[]'::jsonb;
+  cols := (select jsonb_agg((select jsonb_agg(n order by random()) from generate_series(case when cc = 1 then 1 else (cc-1)*10 end, case when cc = 1 then 9 when cc = 9 then 90 else (cc-1)*10+9 end) n) order by cc) from generate_series(1,9) cc);
+  for t in 1..6 loop
+   g := array_fill(0, array[27]); rws := array[0,0,0];
+   for c in select x from generate_series(1,9) x order by cnt[(t-1)*9+x] desc, random() loop
+    k := cnt[(t-1)*9+c];
+    select array_agg(x order by x) into rs from (select x from generate_series(1,3) x order by rws[x], random() limit k) q;
+    select array_agg(n order by n) into nums from (select (e.value #>> '{}')::int n from jsonb_array_elements(cols->(c-1)) with ordinality e(value, ord) where e.ord > ptr[c] and e.ord <= ptr[c] + k) q;
+    ptr[c] := ptr[c] + k;
+    for i in 1..k loop
+     if rws[rs[i]] >= 5 then ok := false; end if;
+     g[(rs[i]-1)*9+c] := nums[i]; rws[rs[i]] := rws[rs[i]] + 1;
+    end loop;
+   end loop;
+   if rws <> array[5,5,5] then ok := false; end if;
+   exit when not ok;
+   card := (select jsonb_agg((select jsonb_agg(nullif(g[(rr-1)*9+cc], 0) order by cc) from generate_series(1,9) cc) order by rr) from generate_series(1,3) rr);
+   res := res || jsonb_build_array(card);
+  end loop;
+  if ok then return res; end if;
+ end loop;
+end $$;
+revoke all on function public.fun_make_strip() from public, anon, authenticated;
+
+create or replace function public.fun_mark_paid(p_res uuid, p_amount numeric, p_receipt text) returns jsonb
+language plpgsql security definer set search_path = public as $function$
+declare r public.fun_reservations; n public.fun_nights; nums int[]; i int; j int; k int; code text; nm text; cnt int; tl text; strip jsonb;
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  select * into r from public.fun_reservations where id = p_res for update;
+  if not found then raise exception 'Reservation not found'; end if;
+  select * into n from public.fun_nights where id = r.night_id for update;
+  if r.status = 'paid' then raise exception 'Already marked as paid.'; end if;
+  if n.status = 'closed' then raise exception 'This night is closed.'; end if;
+  if r.status in ('expired','refunded') then
+    select count(*) into cnt from public.fun_reservations where night_id = r.night_id and status in ('reserved','paid');
+    if cnt >= n.max_players then raise exception 'This night is full.'; end if;
+  end if;
+  if n.game = 'raffle' then
+    select array_agg(x) into nums from (
+      select g x from generate_series(1, 9999) g
+       where not exists (select 1 from public.fun_tickets t where t.night_id = r.night_id and t.number = g)
+       order by gen_random_uuid() limit r.qty) q;
+    if coalesce(array_length(nums,1),0) < r.qty then raise exception 'Not enough ticket numbers left.'; end if;
+    for j in 1..r.qty loop
+      insert into public.fun_tickets(night_id, user_id, reservation_id, number) values (r.night_id, r.user_id, r.id, nums[j]);
+    end loop;
+  else
+    select coalesce(max(number),0) into i from public.fun_tickets where night_id = r.night_id;
+    for j in 1..r.qty loop
+      strip := public.fun_make_strip();
+      for k in 0..5 loop
+        i := i + 1;
+        insert into public.fun_tickets(night_id, user_id, reservation_id, number, card) values (r.night_id, r.user_id, r.id, i, strip->k);
+      end loop;
+    end loop;
+  end if;
+  code := public.fun_make_passcode();
+  update public.fun_reservations set status = 'paid', paid_at = now(), paid_by = auth.uid(), amount = p_amount, receipt = nullif(trim(coalesce(p_receipt,'')),''), passcode = code where id = p_res;
+  select display_name into nm from public.profiles where id = r.user_id;
+  insert into public.fun_name_clips(user_id, spoken_as, status) values (r.user_id, coalesce(nm,'friend'), 'pending') on conflict (user_id) do nothing;
+  select string_agg(lpad(t.number::text, 4, '0'), ', ' order by t.number) into tl from public.fun_tickets t where t.reservation_id = p_res;
+  perform public.fun_tell(r.user_id,
+    'You''re in! 🎉 Your place at ' || n.name || ' is confirmed.' || E'\n\n' ||
+    'When: ' || to_char(n.starts_at at time zone 'Asia/Famagusta', 'FMDay FMDD FMMonth, HH24:MI') || E'\n' ||
+    case when n.game = 'raffle' then 'Your ticket numbers: ' || coalesce(tl,'') else 'Your bingo booklet is ready: six cards holding every number from 1 to 90.' end || E'\n' ||
+    'Your secret passcode: ' || code || E'\n\n' ||
+    'On the night, tap the 🎉 Fun Night button, type your passcode and knock on the door. We will remind you before it starts.',
+    'You''re in! 🎉', 'Your place at ' || n.name || ' is confirmed. Your passcode is in your messages.');
+  insert into public.fun_sent(night_id, user_id, kind) values (r.night_id, r.user_id, 'paid') on conflict do nothing;
+  insert into public.audit_log(actor, action, detail) values (auth.uid(), 'fun_mark_paid', jsonb_build_object('reservation', p_res, 'amount', p_amount));
+  return jsonb_build_object('ok', true, 'passcode', code);
+end $function$;
+
+create or replace function public.fun_join_round(p_night uuid) returns jsonb
+language plpgsql security definer set search_path = public as $$
+declare n public.fun_nights; v public.fun_reservations; r int; pre boolean; i int; j int; k int; amt numeric; strip jsonb;
+begin
+  if auth.uid() is null then raise exception 'Not signed in'; end if;
+  select * into n from public.fun_nights where id = p_night for update;
+  r := coalesce((n.state->>'round')::int, 1);
+  if not found or n.status <> 'live' or r < 2 or not coalesce((n.state->>'joining')::boolean, false) then raise exception 'This round has already started. You can watch, and join the next one.'; end if;
+  if not exists (select 1 from public.fun_seated s where s.night_id = p_night and s.user_id = auth.uid()) then raise exception 'Not in the room.'; end if;
+  select * into v from public.fun_reservations where night_id = p_night and user_id = auth.uid() and status = 'paid';
+  if not found then raise exception 'No ticket found.'; end if;
+  if exists (select 1 from public.fun_round_joins where night_id = p_night and round = r and user_id = auth.uid()) then return jsonb_build_object('ok', true, 'already', true); end if;
+  pre := v.rounds_paid >= r; amt := case when pre then 0 else coalesce(n.price_amount,0) * v.qty end;
+  insert into public.fun_round_joins(night_id, round, user_id, qty, owes, amount, settled_at) values (p_night, r, auth.uid(), v.qty, not pre, amt, case when pre then now() end);
+  select coalesce(max(number),0) into i from public.fun_tickets where night_id = p_night;
+  for j in 1..v.qty loop
+    strip := public.fun_make_strip();
+    for k in 0..5 loop
+      i := i + 1;
+      insert into public.fun_tickets(night_id, user_id, reservation_id, number, card, round) values (p_night, auth.uid(), v.id, i, strip->k, r);
+    end loop;
+  end loop;
+  return jsonb_build_object('ok', true, 'owes', not pre, 'amount', amt);
+end $$;

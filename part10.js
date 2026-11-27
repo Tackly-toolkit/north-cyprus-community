@@ -74,6 +74,31 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fn-join{background:#fff8ea;color:#3a2a1e;border-radius:18px;padding:16px;margin-top:14px;box-shadow:0 8px 16px rgba(0,0,0,.35)}
 .fn-join h4{margin:0 0 6px;font:800 20px var(--hf)}.fn-join p{margin:0 0 10px}
 .fntop{height:36px;padding:0 10px;border-radius:18px;border:0;background:#f6c343;color:#3a2a1e;font:700 13px var(--bf);display:flex;align-items:center;gap:5px;margin-left:2px;flex:none}.fntop.open{animation:fnglow 1.6s ease-in-out infinite}@keyframes fnglow{50%{box-shadow:0 0 0 5px rgba(246,195,67,.35)}}@media(max-width:560px){#top.hasfn .logo .t{display:none}.fntop b{display:none}.fntop{padding:0 9px;font-size:17px}}
+.fn-v{display:flex;flex-direction:column;gap:6px;margin:-16px;padding-bottom:6px;background:#6b3f1f url(${FI}table.jpg) center/420px;min-height:calc(100vh - 56px);min-height:calc(100dvh - 56px)}
+#ov:has(.fn-v){background:#6b3f1f}.ovb:has(.fn-v){padding-bottom:0}
+.fn-left{display:flex;flex-direction:column;gap:6px;min-width:0}
+.fn-v .fn-room{position:relative;overflow:hidden;margin:0;max-height:calc(100vh - 500px);max-height:calc(100dvh - 500px);min-height:150px;display:flex;align-items:center;background:#2a1a10}
+.fn-v .fn-stage{width:100%;flex:none;transform:none}
+.fn-fr.me .fn-fi{background:#35c46a;box-shadow:0 0 10px 3px rgba(53,196,106,.85)}
+.fn-rb{position:absolute;left:0;right:0;bottom:0;display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:14px 8px 6px;background:linear-gradient(transparent,rgba(40,24,12,.88));color:#fff;font:600 12px var(--bf);z-index:6}.fn-rb .grow{flex:1;min-width:120px}.fn-rb .fn-chip{padding:4px 10px;font-size:12px}
+.fn-mates{display:flex;align-items:center;gap:6px;margin:0 8px;background:rgba(255,248,234,.95);border-radius:12px;padding:5px 9px;color:#3a2a1e;overflow:hidden}.fn-mates>b{font-size:12px;line-height:1.15;margin-right:auto;flex:none}.fn-mates>b small{display:block;font-weight:600;color:#8a6a4f}
+.fn-m{border:0;background:none;padding:0;display:grid;justify-items:center;gap:1px;min-width:0;color:#3a2a1e}.fn-m .ph{width:34px;height:34px;border-radius:8px;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,.3);background:#f6eedc center/cover;display:grid;place-items:center;color:#fff;font:800 15px var(--bf)}.fn-m i{font:700 10px var(--bf);max-width:44px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.fn-m.me .ph{border-color:#35c46a;box-shadow:0 0 6px 2px rgba(53,196,106,.7)}.fn-m.mu .ph{opacity:.45}
+.fn-also{margin:0 8px;color:#fff3df;font-size:12px;text-align:center}
+.fn-info{display:none}
+.fn-v .fn-tab{margin:0;padding:0 8px 10px;border-radius:0;background:none;box-shadow:none;display:flex;flex-direction:column;gap:6px}
+.fn-v .fn-call{padding:6px 9px;gap:9px;border-radius:16px}.fn-v .fn-ball{width:46px;height:46px;font-size:21px;flex:none}.fn-v .fn-call b{font-size:16px}.fn-v .fn-call small{font-size:11px}.fn-v .fn-call .grow{flex:1;min-width:0}
+.fn-v .fn-bingo{padding:11px 14px;font-size:16px;flex:none}
+.fn-called{display:flex;gap:6px;align-items:center;background:rgba(255,248,234,.95);border-radius:10px;padding:5px 9px;font-size:12px;color:#3a2a1e;white-space:nowrap;overflow:hidden}.fn-called span{overflow:hidden;flex:1;min-width:0}.fn-called i{font-style:normal;font-weight:800;background:#ffe38a;border-radius:6px;padding:0 5px}.fn-called em{font-style:normal;color:#8a6a4f;flex:none}
+.fn-book{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.fn-book.n6 .fn-tk:nth-child(1){order:1}.fn-book.n6 .fn-tk:nth-child(2){order:3}.fn-book.n6 .fn-tk:nth-child(3){order:5}.fn-book.n6 .fn-tk:nth-child(4){order:2}.fn-book.n6 .fn-tk:nth-child(5){order:4}.fn-book.n6 .fn-tk:nth-child(6){order:6}
+.fn-book .fn-tk{background:#fffaf0;border:0;border-radius:9px;padding:3px;margin:0;display:block;box-shadow:0 2px 5px rgba(0,0,0,.3);min-width:0}.fn-book .fn-tk.hot{box-shadow:0 0 0 3px #f6c343,0 2px 8px rgba(0,0,0,.4)}
+.fn-r{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:2px;margin-bottom:2px}.fn-r:last-child{margin-bottom:0}
+.fn-book .fn-c{aspect-ratio:38/48;background:#fff;border:1px solid #d8c7a4;border-radius:4px;font:800 clamp(11px,2.95vw,20px)/1 var(--bf);letter-spacing:-.3px;min-width:0}.fn-book .fn-c.e{background:#f1e4c9;border-color:transparent}.fn-book .fn-c.now{background:#ffe9a6;border-color:#c9a03c}.fn-book .fn-c.d:after{inset:6% 2%}
+.fn-v .fn-drum{width:64px;height:auto;margin:0;flex:none}
+.fn-fair{margin:0 4px;font-size:12.5px;color:#fff3dc;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+.fn-v .fn-rev{margin-top:0}.fn-v .fn-join{margin-top:0}
+@media(min-width:700px){.fn-v .fn-room{max-height:calc(100dvh - 770px)}.fn-book{gap:12px}.fn-book .fn-tk{padding:6px;border-radius:14px}.fn-r{gap:4px;margin-bottom:4px}.fn-book .fn-c{border-radius:7px;font-size:clamp(15px,2.4vw,22px)}.fn-m .ph{width:44px;height:44px}.fn-m i{font-size:12px;max-width:60px}}
+@media(min-width:1000px){#ov .wrap:has(.fn-v){max-width:1240px}.fn-v{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start;padding:14px;border-radius:0}.fn-v .fn-room{max-height:none;border-radius:16px}.fn-mates,.fn-also{margin:0}.fn-info{display:block;background:rgba(255,248,234,.95);border-radius:14px;padding:12px 14px;color:#3a2a1e;font-size:14px}.fn-info h4{margin:0 0 6px;font:700 15px Georgia,serif}.fn-info p{margin:0 0 12px;color:#6d5a4a;line-height:1.6}.fn-called{display:none}.fn-v .fn-tab{padding:0}.fn-book .fn-c{font-size:clamp(14px,1.45vw,20px)}}
 .fn-seg{display:flex;gap:8px;flex-wrap:wrap}.fn-seg button{flex:1;min-width:64px}
 </style>`);
 
@@ -109,7 +134,7 @@ V.fun=function(){
   let body='';
   if(st==='paid')body=`<div class="card" style="background:var(--gs);box-shadow:none"><b>You're in.</b> Your secret passcode:<span class="fn-code" style="margin-top:8px">${esc(m.passcode||'')}</span></div>${open?`<button class="btn block" data-act="fundoor" data-id="${n.id}">Go to the door</button>`:`<p class="sm mut">The doors open about 15 minutes before the start. We will remind you.</p>`}`;
   else if(st==='reserved')body=`<div class="card" style="background:#fff6d9;color:#3a2a1e;box-shadow:none"><b>Reserved, not paid yet.</b><p style="margin:6px 0 0">Pay in cash by <b>${fWhen(m.expires_at)}</b> to keep your place.</p><p style="margin:6px 0 0;white-space:pre-line">${n.pay_info?esc(n.pay_info):'We will let you know where and when to pay Chris or Natalie.'}</p></div><button class="btn line block" data-act="funcancel" data-id="${n.id}">Cancel my reservation</button>`;
-  else if(n.status==='sales'&&n.players<n.max_players)body=`<label class="f" for="fq-${n.id}">How many ${n.game==='bingo'?'bingo cards':'raffle tickets'}?</label><select id="fq-${n.id}">${Array.from({length:n.max_tickets_each},(_,i)=>`<option>${i+1}</option>`).join('')}</select><label class="row" style="gap:10px;margin-top:10px;align-items:flex-start"><input type="checkbox" id="fc-${n.id}" style="width:22px;height:22px;flex:none"><span>I am in Cyprus and can pay in cash in person.</span></label><button class="btn block" style="margin-top:10px" data-act="funreserve" data-id="${n.id}">Reserve my place</button><p class="xs mut">You pay in cash in person within 2 days. Nothing is paid online.</p>`;
+  else if(n.status==='sales'&&n.players<n.max_players)body=`${n.game==='bingo'&&n.max_tickets_each<2?`<input type="hidden" id="fq-${n.id}" value="1"><p style="margin:0"><b>One bingo booklet each.</b> Six cards, with every number from 1 to 90 on them, just like a real booklet.</p>`:`<label class="f" for="fq-${n.id}">How many ${n.game==='bingo'?'bingo booklets':'raffle tickets'}?</label><select id="fq-${n.id}">${Array.from({length:n.max_tickets_each},(_,i)=>`<option>${i+1}</option>`).join('')}</select>`}<label class="row" style="gap:10px;margin-top:10px;align-items:flex-start"><input type="checkbox" id="fc-${n.id}" style="width:22px;height:22px;flex:none"><span>I am in Cyprus and can pay in cash in person.</span></label><button class="btn block" style="margin-top:10px" data-act="funreserve" data-id="${n.id}">Reserve my place</button><p class="xs mut">You pay in cash in person within 2 days. Nothing is paid online.</p>`;
   else if(n.status==='sales')body=`<p class="mut">This night is full.</p>`;
   else body=`<p class="mut">${n.status==='closed'?'This night has finished.':'Ticket sales have closed for this night.'}</p>`;
   return `<div class="card"><div class="row" style="justify-content:space-between;gap:8px"><h3 class="h2" style="overflow-wrap:anywhere">${esc(n.name)}</h3><span class="pill">${n.game==='bingo'?'Bingo':'Raffle'}</span></div><p class="mut" style="margin:4px 0 8px">${fWhen(n.starts_at)}${n.price_text?' · '+esc(n.price_text):''}</p>${(n.prizes||[]).length?`<p class="sm" style="margin:0 0 10px"><b>Prizes:</b> ${n.prizes.map(p=>esc(p.text||p)).join(' · ')}</p>`:''}<div class="stack">${body}</div></div>`}).join('')}
@@ -198,42 +223,49 @@ function funConfetti(){const c=document.createElement('div');c.className='fn-con
 
 /* ---------- the room view ---------- */
 function funFrame(seat,pos,st,i){
- const w=pos[2]/12,me=seat.id===st.me,win=FUN.over&&FUN.over.win===seat.id,col=['#2f7d4f','#2b6cb0','#8a4fb3','#d66945','#be8c28','#3f6f73'][i%6];
+ const w=pos[2]/12,me=seat.id===st.me,win=FUN.over&&FUN.over.win===seat.id,col=['#2b6cb0','#8a4fb3','#d66945','#be8c28','#7a5238','#b0413e'][i%6];
  return `<div class="fn-fr${me?' me':''}${win?' win':''}" style="left:${pos[0]/12}%;top:${pos[1]/8.96}%;width:${w}%" ${me?'':`data-act="funseat" data-id="${seat.id}"`}><div class="fn-fi">${win?'<span class="hat">🥳</span>':''}<div class="ph" style="${seat.photo?`background-image:url('${esc(seat.photo)}')`:`background:${col}`}">${seat.photo?'':esc((seat.name||'?')[0].toUpperCase())}</div><div class="nm">${esc((seat.name||'').split(' ')[0])}</div></div></div>`;
 }
+/* which of my cards is closest to winning the game being played (lines complete by called numbers) */
+function funBest(){const st=FUN.st,called={};(st.calls||[]).forEach(n=>called[n]=1);let best=null,bl=-1;FUN.tix.forEach(t=>{if(!t.card)return;const l=t.card.filter(r=>r.every(n=>n===null||called[n])).length;if(l>bl){bl=l;best=t}});return best}
 V.funroom=function(){
  const st=FUN.st;if(!st)return {t:'Fun Night',b:'<p class="mut">Opening the room…</p>'};
  const s=st.state||{},R=ROOMS[st.room]||ROOMS.small,byT={};st.seats.forEach(x=>{(byT[x.table]=byT[x.table]||[]).push(x)});
  let frames='';R.t.forEach((tb,ti)=>{(byT[ti+1]||[]).forEach((seat,k)=>{if(tb[k])frames+=funFrame(seat,tb[k],st,k+ti)})});
- const mt=Math.min(st.my_table||1,R.t.length),tb=R.t[mt-1],big=R.t.length>1;
- let tf='';if(big&&FUN.zoom&&tb){const cx=tb.reduce((a,p)=>a+p[0],0)/tb.length/12,cy=tb.reduce((a,p)=>a+p[1]-30,0)/tb.length/8.96,z={medium:1.7,large:2.2,xl:2.6}[st.room]||2;tf=`transform:scale(${z}) translate(${Math.max(-(100-100/z),Math.min(0,50/z-cx))}%,${Math.max(-(100-100/z),Math.min(0,50/z-cy))}%)`}
  const extra=st.seats.filter(x=>x.table>R.t.length);
- const talkOn=FUN.talk.on,canTalk=s.talk===true,quiet=!!s.quiet;
- let game='';
+ const talkOn=FUN.talk.on,canTalk=s.talk===true,quiet=!!s.quiet,host=/^george$/i.test((st.host_name||'').trim())?'':(st.host_name||'').trim();
+ const cols=['#2b6cb0','#8a4fb3','#d66945','#be8c28','#7a5238','#b0413e'];
+ const mine=(byT[st.my_table]||[]).slice().sort((x,y)=>(y.id===st.me)-(x.id===st.me));
+ const mates=`<div class="fn-mates"><b>Your table${R.t.length>1?'<small>Table '+st.my_table+'</small>':''}</b>${mine.map((x,i)=>{const me=x.id===st.me;return `<button class="fn-m${me?' me':''}${FUN.talk.muted[x.id]?' mu':''}" ${me?'':`data-act="funseat" data-id="${x.id}"`}><span class="ph" style="${x.photo?`background-image:url('${esc(x.photo)}')`:`background:${cols[i%6]}`}">${x.photo?'':esc((x.name||'?')[0].toUpperCase())}</span><i>${me?'You':esc((x.name||'').split(' ')[0])}</i></button>`}).join('')}</div>`;
+ const prizes=st.prizes.map((p,i)=>`<div class="row" style="justify-content:space-between;gap:8px"><span>${st.game==='bingo'?['One line','Two lines','Full house'][i]||'Prize '+(i+1):'Prize '+(i+1)}</span><b style="text-align:right">${esc(p.text||'')}</b></div>`).join('');
+ let game='',side='';
  if(st.game==='bingo'){
   const last=st.calls[st.calls.length-1],stage=s.stage||1,rd=st.round||1,need=rd>1&&!st.joined,qty=st.my_qty||0,cost=(+st.price_amount||0)*qty;
   let join='';
-  if(need&&qty&&s.joining&&!FUN.skip)join=`<div class="fn-join"><h4>Fancy another round?</h4><p>Round ${rd} is about to start, with fresh cards and a clean board. ${st.prizes.length?'Playing for: '+st.prizes.map(p=>esc(p.text||'')).filter(Boolean).join(' · ')+'.':''}</p><p>${st.prepaid?'<b>You have already paid for this round.</b>':cost?`<b>${cost.toLocaleString('en-GB')} ${esc(st.currency||'TL')}</b> for your ${qty} card${qty===1?'':'s'}. Nothing to pay now: just pay Chris or Natalie next time you see them.`:'Pay Chris or Natalie next time you see them.'}</p><div class="fn-seg"><button class="btn" data-act="funjoin">Join round ${rd}</button><button class="btn soft" data-act="funskip">Just watch</button></div></div>`;
+  if(need&&qty&&s.joining&&!FUN.skip)join=`<div class="fn-join"><h4>Fancy another round?</h4><p>Round ${rd} is about to start, with a fresh booklet and a clean board. ${st.prizes.length?'Playing for: '+st.prizes.map(p=>esc(p.text||'')).filter(Boolean).join(' · ')+'.':''}</p><p>${st.prepaid?'<b>You have already paid for this round.</b>':cost?`<b>${cost.toLocaleString('en-GB')} ${esc(st.currency||'TL')}</b> for your booklet. Nothing to pay now: just pay Chris or Natalie next time you see them.`:'Pay Chris or Natalie next time you see them.'}</p><div class="fn-seg"><button class="btn" data-act="funjoin">Join round ${rd}</button><button class="btn soft" data-act="funskip">Just watch</button></div></div>`;
   else if(need)join=`<div class="fn-join"><h4>You are watching round ${rd}</h4><p>${qty&&s.joining?'Changed your mind? You can still join until the first number is called.':'Sit back and enjoy. You can join the next one if there is another round.'}</p>${qty&&s.joining?`<button class="btn block" data-act="funjoin">Join round ${rd}</button>`:''}</div>`;
-  else if(rd>1&&s.joining)join=`<div class="fn-join"><h4>You are in for round ${rd}</h4><p style="margin:0">Fresh cards are on the table. The first number is coming up.</p></div>`;
-  game=`<div class="fn-call">${last?`<div class="fn-ball">${last}</div><div><small>George just called</small><b>${esc(NICK[last]||'')}</b></div>`:`<div class="fn-ball">?</div><div><small>${st.status==='live'?'Eyes down':'Waiting for the start'}</small><b>${st.status==='live'?'First number coming up':'Find your seat and get comfy'}</b></div>`}<span class="pill" style="margin-left:auto;flex:none">${rd>1?'Round '+rd+' · ':''}${['One line','Two lines','Full house'][stage-1]}</span></div>${join}
-  ${FUN.tix.map(t=>`<div class="fn-card"><h4>YOUR CARD · No. ${fTk(t.number)}</h4><div class="fn-grid" data-tk="${t.id}">${t.card.map((row,r)=>row.map((n,c)=>n===null?'<span class="fn-c e"></span>':`<button class="fn-c${(FUN.marks[t.id]||{})[n]?' d':''}" data-act="funmark" data-tk="${t.id}" data-n="${n}">${n}</button>`).join('')).join('')}</div>${st.status==='live'?`<div style="text-align:right;margin-top:8px"><button class="fn-bingo" data-act="funbingo" data-id="${t.id}">Bingo!</button></div>`:''}</div>`).join('')}
-  ${FUN.tix.length?`<div class="fn-row"><div class="fn-tray"><span class="fn-chipc" id="fn-src"></span><span>Drag a counter onto your number, or tap the number. Tap again to take it off.</span></div></div>`:''}
-  <p class="xs" style="color:#fff3df;margin-top:10px;text-align:center">${st.calls.length} of 90 called${st.calls.length?': '+st.calls.slice(-8).join(', '):''}</p>`;
+  else if(rd>1&&s.joining)join=`<div class="fn-join"><h4>You are in for round ${rd}</h4><p style="margin:0">Your fresh booklet is on the table. The first number is coming up.</p></div>`;
+  const book=FUN.tix.map(t=>{const m=FUN.marks[t.id]||{},hot=last&&!m[last]&&t.card.some(r=>r.includes(last));return `<div class="fn-tk${hot?' hot':''}">${t.card.map(row=>`<div class="fn-r">${row.map(n=>n===null?'<span class="fn-c e"></span>':`<button class="fn-c${m[n]?' d':''}${n===last&&!m[n]?' now':''}" data-act="funmark" data-tk="${t.id}" data-n="${n}">${n}</button>`).join('')}</div>`).join('')}</div>`}).join('');
+  game=`<div class="fn-call">${last?`<div class="fn-ball">${last}</div><div class="grow"><small>George just called</small><b>${esc(NICK[last]||'')}</b></div>`:`<div class="fn-ball">?</div><div class="grow"><small>${st.status==='live'?'Eyes down':'Waiting for the start'}</small><b>${st.status==='live'?'First number coming up':'Find your seat and get comfy'}</b></div>`}<span class="pill" style="flex:none">${rd>1?'Round '+rd+' · ':''}${['One line','Two lines','Full house'][stage-1]}</span>${st.status==='live'&&FUN.tix.length?'<button class="fn-bingo" data-act="funbingo">Bingo!</button>':''}</div>
+  <div class="fn-called"><b>Latest:</b><span>${st.calls.length?'<i>'+last+'</i>'+st.calls.slice(-13,-1).reverse().map(n=>' · '+n).join(''):'nothing yet'}</span><em>${st.calls.length} of 90</em></div>${join}
+  ${FUN.tix.length?`<div class="fn-book n${FUN.tix.length}">${book}</div>`:''}`;
+  side=`<div class="fn-info"><h4>Called so far</h4><p>${st.calls.length?st.calls.join(' · '):'Nothing yet'}</p><h4>Tonight's prizes</h4>${prizes}</div>`;
  }else{
   const shown=st.draws.filter(d=>d.prize_no!==FUN.hide),won={};shown.forEach(d=>won[d.number]=1);
   const rv=FUN.rev,pre=rv?rv.d.slice(0,rv.k).join(''):'',inn=t=>fTk(t.number).startsWith(pre),mIn=rv?FUN.tix.filter(inn).length:0;
   const rmsg=!rv?'':rv.k===0?'Good luck, everyone!':rv.k===4?'Check your tickets…':mIn?(rv.k===3?'One number away! ':'')+`${mIn} of your tickets ${mIn===1?'is':'are'} still in!`:(FUN.tix.length?'Not yours this time. Fingers crossed for your table!':'');
   const rev=rv?`<div class="fn-rev"><small>${rv.prize?'Drawing: '+esc(rv.prize):'The winning ticket'}</small><div class="fn-revd">${[0,1,2,3].map(i=>`<span class="${i<rv.k?'on'+(rv.pop&&i===rv.k-1?' pop':''):i===rv.roll?'roll':''}"${i===rv.roll?' id="fn-roll"':''}>${i<rv.k?rv.d[i]:i===rv.roll?'?':'·'}</span>`).join('')}</div><p>${rmsg}</p></div>`:'';
-  game=`<img class="fn-drum${FUN.spin?' spin':''}" src="${FI}drum.png" alt=""><div class="fn-call" style="margin-top:10px"><div><small>${st.status==='live'?(FUN.spin?'The drum is spinning':'Good luck!'):'Waiting for the start'}</small><b>${shown.length?`Last winner: ticket ${fTk(shown[shown.length-1].number)}`:`${st.prizes.length} prize${st.prizes.length===1?'':'s'} tonight`}</b></div></div><p style="margin:8px 4px 0;font-size:13px;color:#fff3dc;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.5)">Every ticket number and every winner is picked by an automated system, never by hand.</p>${rev}
+  const wins=shown.length?`<b>Winners so far</b>${shown.map(d=>`<div class="row" style="justify-content:space-between;gap:8px;margin-top:6px"><span>${esc(d.prize||'Prize '+d.prize_no)}</span><b>${fTk(d.number)} · ${esc((d.name||'').split(' ')[0])}</b></div>`).join('')}`:'';
+  game=`<div class="fn-call"><img class="fn-drum${FUN.spin?' spin':''}" src="${FI}drum.png" alt=""><div class="grow"><small>${st.status==='live'?(FUN.spin?'The drum is spinning':'Good luck!'):'Waiting for the start'}</small><b>${shown.length?`Last winner: ticket ${fTk(shown[shown.length-1].number)}`:`${st.prizes.length} prize${st.prizes.length===1?'':'s'} tonight`}</b></div></div>
+  <p class="fn-fair">Every ticket number and every winner is picked by an automated system, never by hand.</p>${rev}
   <div class="fn-rt">${FUN.tix.map(t=>`<span class="fn-rtk${won[t.number]?' w':''}${rv&&rv.k?(inn(t)?' in':' out'):''}">${fTk(t.number)}</span>`).join('')}</div>
-  ${shown.length?`<div class="card" style="margin-top:14px"><b>Winners so far</b>${shown.map(d=>`<div class="row" style="justify-content:space-between;gap:8px;margin-top:6px"><span>${esc(d.prize||'Prize '+d.prize_no)}</span><b>${fTk(d.number)} · ${esc((d.name||'').split(' ')[0])}</b></div>`).join('')}</div>`:''}`;
+  ${wins?`<div class="card fn-wins" style="margin-top:12px">${wins}</div>`:''}`;
+  side=`<div class="fn-info"><h4>Tonight's prizes</h4>${prizes}</div>`;
  }
- return {t:esc(st.name),b:`<div class="fn-room"><div class="fn-stage" style="${tf}"><img class="bg" src="${FI}${R.img}" alt="">${frames}</div></div>
- <div class="fn-bar"><span class="grow">🎙 George, your host${quiet?' · <b>The host is speaking</b>':''}</span>${big?`<button class="fn-chip" data-act="funzoom">${FUN.zoom?'Whole room':'My table'}</button>`:''}${R.t.length>1?`<button class="fn-chip" data-act="funtables">Table ${st.my_table}</button>`:''}</div>
- <div class="fn-bar" style="background:#4a3223"><span class="grow">${canTalk?(talkOn?(quiet?'Table talk paused':'Table talk is on'):'Chat with your table'):'Table talk is off tonight'}</span>${canTalk?`<button class="fn-chip ${talkOn?'on':''}" data-act="funtalk">${talkOn?'Table talk: on':'Table talk: off'}</button>${talkOn?`<button class="fn-chip ${FUN.talk.mic?'':'off'}" data-act="funmic">${FUN.talk.mic?'Mic on':'Mic muted'}</button>`:''}`:''}</div>
- ${extra.length?`<div class="fn-bar" style="background:#3b2a1e;font-weight:500">Also here: ${extra.map(x=>esc((x.name||'').split(' ')[0])).join(', ')}</div>`:''}
- <div class="fn-tab">${game}</div>
+ return {t:esc(st.name),b:`<div class="fn-v"><div class="fn-left"><div class="fn-room"><div class="fn-stage"><img class="bg" src="${FI}${R.img}" alt="">${frames}</div>
+ <div class="fn-rb"><span class="grow">🎙 ${host?esc(host)+' is your host · George calling':'George, your host'}${quiet?' · <b>The host is speaking</b>':''}</span>${R.t.length>1?`<button class="fn-chip" data-act="funtables">Change table</button>`:''}${canTalk?`<button class="fn-chip ${talkOn?'on':''}" data-act="funtalk">${talkOn?'Table talk: on':'Table talk: off'}</button>${talkOn?`<button class="fn-chip ${FUN.talk.mic?'':'off'}" data-act="funmic">${FUN.talk.mic?'Mic on':'Mic muted'}</button>`:''}`:''}</div></div>
+ ${mates}${extra.length?`<div class="fn-also">Also here: ${extra.map(x=>esc((x.name||'').split(' ')[0])).join(', ')}</div>`:''}${side}</div>
+ <div class="fn-tab">${game}</div></div>
  ${FUN.over?`<div class="fn-over"><div class="bx"><h3>${FUN.over.h}</h3><p>${FUN.over.p}</p></div></div>`:''}`};
 };
 ACT.funjoin=async()=>{try{const r=await frpc('fun_join_round',{p_night:FUN.id});FUN.skip=false;toast(r&&r.owes?`You're in! Please pay ${(+r.amount).toLocaleString('en-GB')} ${FUN.st.currency||'TL'} next time.`:"You're in! Fresh cards are on the table.");funTick();await funTix();await funSync()}catch(e){fErr(e)}};
@@ -248,7 +280,7 @@ ACT.funmute=d=>{FUN.talk.muted[d.id]=!FUN.talk.muted[d.id];funTalkRules();closeS
 
 /* ---------- bingo: tap or drag a counter, then call Bingo ---------- */
 function funSetMark(tk,n,on){const m=FUN.marks[tk]=FUN.marks[tk]||{};if(on===undefined)on=!m[n];if(on)m[n]=1;else delete m[n];try{localStorage.setItem('fn-m-'+FUN.id,JSON.stringify(FUN.marks))}catch(e){}funSfx('dab')}
-ACT.funmark=(d,el)=>{funSetMark(d.tk,d.n);el.classList.toggle('d')};
+ACT.funmark=(d,el)=>{funSetMark(d.tk,d.n);funPaint()};
 document.addEventListener('pointerdown',e=>{
  if(!e.target.closest||!e.target.closest('#fn-src'))return;e.preventDefault();FUN.dragging=true;
  const g=document.createElement('div');g.className='fn-drag';document.body.appendChild(g);let hot=null;
@@ -256,7 +288,7 @@ document.addEventListener('pointerdown',e=>{
  const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);g.remove();FUN.dragging=false;if(hot){hot.classList.remove('hot');funSetMark(hot.dataset.tk,hot.dataset.n,true);hot.classList.add('d')}};
  mv(e);document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
 });
-ACT.funbingo=async d=>{try{await frpc('fun_claim',{p_night:FUN.id,p_ticket:d.id});funTick();funSync()}catch(e){fErr(e)}};
+ACT.funbingo=async d=>{const bt=d.id?{id:d.id}:funBest();if(!bt)return;try{await frpc('fun_claim',{p_night:FUN.id,p_ticket:bt.id});funTick();funSync()}catch(e){fErr(e)}};
 function funTick(){try{if(FUN.ch)FUN.ch.send({type:'broadcast',event:'tick',payload:{}})}catch(e){}}
 
 /* ---------- table talk: a small group call between the phones at one table ---------- */
