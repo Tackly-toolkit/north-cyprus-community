@@ -133,9 +133,10 @@ function funNext(){
  const f=job.list.shift();if(f===undefined){FUN.q.shift();if(job.then)try{job.then()}catch(e){}return funNext()}
  if(typeof f==='number')return setTimeout(funNext,f);
  if(typeof f==='function'){try{f()}catch(e){}return funNext()}
- const a=FAUD[f]||(FAUD[f]=new Audio(FV+f+'.mp3'));a.volume=FUN.vol;a.currentTime=0;let done=false;const go=()=>{if(done)return;done=true;setTimeout(funNext,120)};
+ const a=FAUD[f]||(FAUD[f]=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3'));a.volume=FUN.vol;a.currentTime=0;let done=false;const go=()=>{if(done)return;done=true;setTimeout(funNext,120)};
  a.onended=go;a.onerror=go;a.play().catch(go);setTimeout(go,9000);
 }
+function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
 function funRoll(i){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();FUN.rollT=setInterval(()=>{const e=document.getElementById('fn-roll');if(e)e.textContent=Math.floor(Math.random()*10);funSfx('tick')},90)}
 function funRollStop(){clearInterval(FUN.rollT);FUN.rollT=null}
 async function funTix(){try{FUN.tix=(await frpc('fun_my_tickets',{p_night:FUN.id}))||[]}catch(e){}funPaint()}
@@ -146,7 +147,7 @@ async function funEnterRoom(id){
  try{FUN.tix=(await frpc('fun_my_tickets',{p_night:id}))||[]}catch(e){FUN.tix=[]}
  try{FUN.marks=JSON.parse(localStorage.getItem('fn-m-'+id)||'{}')}catch(e){FUN.marks={}}
  await funSync(true);push('funroom',{id});
- const h=new Date().getHours();funSay([h<17&&h>=5?'welcome_afternoon':'welcome_evening',300,'welcome_all']);
+ const h=new Date().getHours(),mine=funNm(FUN.st&&FUN.st.me);funSay([h<17&&h>=5?'welcome_afternoon':'welcome_evening',300].concat(mine?['welcome_name',mine]:['welcome_all']));
  clearInterval(FUN.timer);FUN.timer=setInterval(()=>funSync(),4000);
  try{if(FUN.ch)sb.removeChannel(FUN.ch);FUN.ch=sb.channel('fun:'+id).on('broadcast',{event:'tick'},()=>funSync()).subscribe()}catch(e){}
 }
@@ -158,15 +159,16 @@ async function funSync(first){
  if(!FUN.id)return;let st;try{st=await frpc('fun_state',{p_night:FUN.id})}catch(e){return}
  if(!st||st.closed){if(!first&&FUN.st){funSay(['goodnight']);toast('The night has finished. Thank you for playing!');const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')pop()}return}
  const prev=FUN.st,sn=FUN.seen;FUN.st=st;const s=st.state||{};
- if(sn.calls<0){sn.calls=st.calls.length;sn.draws=st.draws.length;sn.claim=st.claim&&st.claim.id;sn.stage=s.stage;sn.ann=s.announce&&s.announce.ts;sn.live=st.status==='live';sn.round=st.round;sn.joining=!!s.joining}
- if(st.status==='live'&&!sn.live){sn.live=true;funSay(st.game==='bingo'?['eyes_down',300,'stage_'+(s.stage||1)]:['raffle_intro'])}
+ if(sn.calls<0){sn.calls=st.calls.length;sn.draws=st.draws.length;sn.claim=st.claim&&st.claim.id;sn.stage=s.stage;sn.ann=s.announce&&s.announce.ts;sn.live=st.status==='live';sn.round=st.round;sn.joining=!!s.joining;sn.ids={};st.seats.forEach(x=>sn.ids[x.id]=1)}
+ if(sn.ids){st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u&&st.status!=='live'&&x.id!==st.me)funSay(['welcome_name',u])})}
+ if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;funSay(st.game==='bingo'?['eyes_down',300,'stage_'+(s.stage||1)]:['raffle_intro'])}
  if(st.game==='bingo'){
   if(st.round!==sn.round){sn.round=st.round;sn.calls=st.calls.length;sn.stage=s.stage;sn.joining=!!s.joining;FUN.marks={};try{localStorage.removeItem('fn-m-'+FUN.id)}catch(e){}FUN.tix=[];FUN.skip=false;funSay(['round_new']);funTix()}
   if(sn.joining&&!s.joining){funSay(['eyes_down',300,'stage_1'])}sn.joining=!!s.joining;
   if(s.stage!==sn.stage&&sn.live){sn.stage=s.stage;funSay(['stage_'+(s.stage||1)])}
   if(st.calls.length>sn.calls){const n=st.calls[st.calls.length-1];sn.calls=st.calls.length;funSay(['nick_'+n,350,'num_'+n])}
   if(st.claim&&st.claim.id!==sn.claim){sn.claim=st.claim.id;const c=st.claim,mine=c.user===st.me;
-   if(c.valid){FUN.over={h:mine?'BINGO! You won!':'We have a winner!',p:`${esc(c.name||'')} wins the ${['one line','two lines','full house'][c.stage-1]} game.`,win:c.user};funSay(['bingo_check',200,'bingo_valid',c.stage===3?'bingo_house':'bingo_line','cheer'],()=>{});funSfx('win');funConfetti()}
+   if(c.valid){FUN.over={h:mine?'BINGO! You won!':'We have a winner!',p:`${esc(c.name||'')} wins the ${['one line','two lines','full house'][c.stage-1]} game.`,win:c.user};funSay(['bingo_check',200,'bingo_valid'].concat(funNm(c.user)||[],[c.stage===3?'bingo_house':'bingo_line','cheer']),()=>{});funSfx('win');funConfetti()}
    else if(mine){FUN.over={h:'Not yet',p:'That card is not quite there. On we go.'};funSay(['bingo_no'])}
    setTimeout(()=>{FUN.over=null;funPaint()},c.valid?9000:3500)}
  }else{
@@ -174,7 +176,7 @@ async function funSync(first){
    /* the build-up: drum, then one number at a time with a roll before each */
    const seq=[d.prize_no<=5&&d.prize_no===st.prizes.length?'prize_1':'prize_next',()=>{FUN.spin=true;FUN.rev={d:dg,k:0,roll:-1,prize:d.prize};funPaint()},'raffle_spin',2200,'raffle_ticket',500];
    dg.forEach((x,i)=>seq.push('raffle_n'+(i+1),()=>funRoll(i),i===3?3400:1700+i*350,()=>{funRollStop();if(FUN.rev){FUN.rev.k=i+1;FUN.rev.roll=-1;FUN.rev.pop=true;setTimeout(()=>{if(FUN.rev)FUN.rev.pop=false},450)}funSfx('lock');funPaint()},'digit_'+x,i===2?'raffle_close':i===3?1500:450));
-   funSay(seq,()=>{funRollStop();FUN.spin=false;FUN.hide=null;FUN.rev=null;const mine=d.user===st.me;FUN.over={h:mine?'YOU WON!':'We have a winner!',p:`Ticket ${fTk(d.number)} · ${esc(d.name||'')}${d.prize?' wins '+esc(d.prize):''}`,win:d.user};funSfx('win');funConfetti();funSay(['raffle_winner']);funPaint();setTimeout(()=>{FUN.over=null;funPaint()},9000)})}
+   funSay(seq,()=>{funRollStop();FUN.spin=false;FUN.hide=null;FUN.rev=null;const mine=d.user===st.me;FUN.over={h:mine?'YOU WON!':'We have a winner!',p:`Ticket ${fTk(d.number)} · ${esc(d.name||'')}${d.prize?' wins '+esc(d.prize):''}`,win:d.user};funSfx('win');funConfetti();funSay(['raffle_winner'].concat(funNm(d.user)||[]));funPaint();setTimeout(()=>{FUN.over=null;funPaint()},9000)})}
  }
  if(s.announce&&s.announce.ts!==sn.ann){sn.ann=s.announce.ts;if(s.announce.url){const a=new Audio(s.announce.url);a.volume=1;a.play().catch(()=>{})}}
  funTalkRules();

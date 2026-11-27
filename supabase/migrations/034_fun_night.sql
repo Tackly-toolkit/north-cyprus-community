@@ -1068,3 +1068,14 @@ begin
     left join public.fun_name_clips c on c.user_id = r.user_id
     where r.night_id = p_night);
 end $function$;
+
+-- ---------- George's first-name recordings: bucket 'fun', names/<slug>.mp3 ----------
+create or replace function public.fun_name_clip(p_user uuid) returns text
+language sql stable security definer set search_path = public as $$
+  select o.name from public.profiles p left join public.fun_name_clips c on c.user_id = p.id
+    join storage.objects o on o.bucket_id = 'fun'
+     and o.name = 'names/' || regexp_replace(lower(split_part(trim(coalesce(nullif(c.spoken_as,''), p.display_name)), ' ', 1)), '[^a-z]', '', 'g') || '.mp3'
+   where p.id = p_user limit 1
+$$;
+revoke all on function public.fun_name_clip(uuid) from public, anon, authenticated;
+-- fun_admin_reservations and fun_state were re-created to include 'clip' => public.fun_name_clip(user id); see the live definitions.
