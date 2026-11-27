@@ -1070,6 +1070,7 @@ begin
 end $function$;
 
 -- ---------- George's first-name recordings: bucket 'fun', names/<slug>.mp3 ----------
+-- George's recording of a first name lives in the 'fun' bucket as names/<slug>.mp3; a player has a clip when one exists for the first word of how their name is said
 create or replace function public.fun_name_clip(p_user uuid) returns text
 language sql stable security definer set search_path = public as $$
   select o.name from public.profiles p left join public.fun_name_clips c on c.user_id = p.id
@@ -1078,4 +1079,53 @@ language sql stable security definer set search_path = public as $$
    where p.id = p_user limit 1
 $$;
 revoke all on function public.fun_name_clip(uuid) from public, anon, authenticated;
--- fun_admin_reservations and fun_state were re-created to include 'clip' => public.fun_name_clip(user id); see the live definitions.
+
+create or replace function public.fun_admin_reservations(p_night uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $function$
+begin
+  if not public.is_admin() then raise exception 'Admins only'; end if;
+  return (select coalesce(jsonb_agg(jsonb_build_object(
+      'id', r.id, 'user_id', r.user_id, 'name', p.display_name, 'photo', p.photo_url, 'qty', r.qty, 'status', r.status, 'expires_at', r.expires_at,
+      'paid_at', r.paid_at, 'paid_by', pb.display_name, 'amount', r.amount, 'receipt', r.receipt, 'passcode', r.passcode, 'created_at', r.created_at,
+      'rounds_paid', r.rounds_paid,
+      'tickets', (select coalesce(jsonb_agg(t.number order by t.number), '[]'::jsonb) from public.fun_tickets t where t.reservation_id = r.id),
+      'spoken_as', coalesce(c.spoken_as, p.display_name), 'clip', public.fun_name_clip(r.user_id),
+      'seated', exists (select 1 from public.fun_seated s where s.night_id = r.night_id and s.user_id = r.user_id)
+    ) order by r.created_at), '[]'::jsonb)
+    from public.fun_reservations r
+    join public.profiles p on p.id = r.user_id
+    left join public.profiles pb on pb.id = r.paid_by
+    left join public.fun_name_clips c on c.user_id = r.user_id
+    where r.night_id = p_night);
+end $function$;
+
+create or replace function public.fun_state(p_night uuid) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare n public.fun_nights; adm boolean := public.is_admin(); paid int; t int; rd int;
+begin
+  if auth.uid() is null then return null; end if;
+  select * into n from public.fun_nights where id = p_night;
+  if not found then return null; end if;
+  if not adm then
+    if not public.fun_visible() or n.status not in ('doors','live') then return jsonb_build_object('closed', true, 'status', n.status); end if;
+    if not exists (select 1 from public.fun_seated s where s.night_id = p_night and s.user_id = auth.uid()) then return null; end if;
+  end if;
+  paid := public.fun_paid_count(p_night); t := public.fun_tables_for(paid); rd := coalesce((n.state->>'round')::int, 1);
+  return jsonb_build_object(
+    'id', n.id, 'name', n.name, 'game', n.game, 'status', n.status, 'state', n.state, 'prizes', n.prizes, 'starts_at', n.starts_at,
+    'host_name', n.host_name, 'paid', paid, 'tables', t, 'cap', case when t = 1 then 6 else 7 end, 'room', public.fun_room_for(paid),
+    'round', rd, 'price_amount', n.price_amount, 'currency', n.currency,
+    'joined', rd = 1 or exists (select 1 from public.fun_round_joins j where j.night_id = p_night and j.round = rd and j.user_id = auth.uid()),
+    'prepaid', coalesce((select v.rounds_paid >= rd from public.fun_reservations v where v.night_id = p_night and v.user_id = auth.uid()), false),
+    'my_qty', (select v.qty from public.fun_reservations v where v.night_id = p_night and v.user_id = auth.uid()),
+    'me', auth.uid(), 'my_table', (select s.table_no from public.fun_seated s where s.night_id = p_night and s.user_id = auth.uid()),
+    'seats', (select coalesce(jsonb_agg(jsonb_build_object('id', p.id, 'name', p.display_name, 'photo', p.photo_url, 'table', s.table_no, 'say', c.spoken_as, 'clip', public.fun_name_clip(p.id)) order by s.entered_at), '[]'::jsonb)
+                from public.fun_seated s join public.profiles p on p.id = s.user_id left join public.fun_name_clips c on c.user_id = s.user_id where s.night_id = p_night),
+    'calls', (select coalesce(jsonb_agg(c.n order by c.seq), '[]'::jsonb) from public.fun_calls c where c.night_id = p_night),
+    'last_call_at', (select max(c.called_at) from public.fun_calls c where c.night_id = p_night),
+    'draws', (select coalesce(jsonb_agg(jsonb_build_object('prize_no', d.prize_no, 'prize', d.prize_text, 'number', d.number, 'user', d.user_id, 'name', p.display_name, 'at', d.drawn_at) order by d.prize_no), '[]'::jsonb)
+                from public.fun_draws d left join public.profiles p on p.id = d.user_id where d.night_id = p_night),
+    'claim', (select jsonb_build_object('id', c.id, 'stage', c.stage, 'valid', c.valid, 'user', c.user_id, 'name', case when c.valid then p.display_name end, 'at', c.created_at)
+                from public.fun_claims c join public.profiles p on p.id = c.user_id where c.night_id = p_night order by c.created_at desc limit 1),
+    'now', now());
+end $$;
