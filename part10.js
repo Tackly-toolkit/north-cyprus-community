@@ -147,13 +147,14 @@ function funNext(){
  a.onended=go;a.onerror=go;a.play().catch(go);setTimeout(go,9000);
 }
 function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
+function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.6*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
 function funRoll(i){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();FUN.rollT=setInterval(()=>{const e=document.getElementById('fn-roll');if(e)e.textContent=Math.floor(Math.random()*10);funSfx('tick')},90)}
 function funRollStop(){clearInterval(FUN.rollT);FUN.rollT=null}
 async function funTix(){try{FUN.tix=(await frpc('fun_my_tickets',{p_night:FUN.id}))||[]}catch(e){}funPaint()}
 
 /* ---------- entering and syncing the room ---------- */
 async function funEnterRoom(id){
- FUN.id=id;FUN.st=null;FUN.seen={calls:-1,draws:-1,claim:null,stage:null,ann:null,live:false};FUN.q=[];FUN.zoom=true;FUN.rev=null;FUN.spin=false;FUN.hide=null;FUN.over=null;FUN.skip=false;
+ FUN.id=id;FUN.st=null;FUN.seen={calls:-1,draws:-1,claim:null,stage:null,ann:null,live:false};FUN.q=[];FUN.zoom=true;FUN.fair=false;FUN.rev=null;FUN.spin=false;FUN.hide=null;FUN.over=null;FUN.skip=false;
  try{FUN.tix=(await frpc('fun_my_tickets',{p_night:id}))||[]}catch(e){FUN.tix=[]}
  try{FUN.marks=JSON.parse(localStorage.getItem('fn-m-'+id)||'{}')}catch(e){FUN.marks={}}
  await funSync(true);push('funroom',{id});
@@ -171,22 +172,22 @@ async function funSync(first){
  const prev=FUN.st,sn=FUN.seen;FUN.st=st;const s=st.state||{};
  if(sn.calls<0){sn.calls=st.calls.length;sn.draws=st.draws.length;sn.claim=st.claim&&st.claim.id;sn.stage=s.stage;sn.ann=s.announce&&s.announce.ts;sn.live=st.status==='live';sn.round=st.round;sn.joining=!!s.joining;sn.ids={};st.seats.forEach(x=>sn.ids[x.id]=1)}
  if(sn.ids){st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u&&st.status!=='live'&&x.id!==st.me)funSay(['welcome_name',u])})}
- if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;funSay(st.game==='bingo'?['eyes_down',300,'stage_'+(s.stage||1)]:['raffle_intro'])}
+ if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;funSay(st.game==='bingo'?['eyes_down',300,'stage_'+(s.stage||1)]:['raffle_intro',300,'raffle_fair']);if(st.game==='raffle')FUN.fair=true}
  if(st.game==='bingo'){
   if(st.round!==sn.round){sn.round=st.round;sn.calls=st.calls.length;sn.stage=s.stage;sn.joining=!!s.joining;FUN.marks={};try{localStorage.removeItem('fn-m-'+FUN.id)}catch(e){}FUN.tix=[];FUN.skip=false;funSay(['round_new']);funTix()}
   if(sn.joining&&!s.joining){funSay(['eyes_down',300,'stage_1'])}sn.joining=!!s.joining;
   if(s.stage!==sn.stage&&sn.live){sn.stage=s.stage;funSay(['stage_'+(s.stage||1)])}
   if(st.calls.length>sn.calls){const n=st.calls[st.calls.length-1];sn.calls=st.calls.length;funSay(['nick_'+n,350,'num_'+n])}
   if(st.claim&&st.claim.id!==sn.claim){sn.claim=st.claim.id;const c=st.claim,mine=c.user===st.me;
-   if(c.valid){FUN.over={h:mine?'BINGO! You won!':'We have a winner!',p:`${esc(c.name||'')} wins the ${['one line','two lines','full house'][c.stage-1]} game.`,win:c.user};funSay(['bingo_check',200,'bingo_valid'].concat(funNm(c.user)||[],[c.stage===3?'bingo_house':'bingo_line','cheer']),()=>{});funSfx('win');funConfetti()}
+   if(c.valid){FUN.over={h:mine?'BINGO! You won!':'We have a winner!',p:`${esc(c.name||'')} wins the ${['one line','two lines','full house'][c.stage-1]} game.`,win:c.user};funSay(['bingo_check',200,()=>funClap(),'bingo_valid'].concat(funNm(c.user)||[],c.stage===3?['bingo_house']:['bingo_line','congrats'],['cheer']),()=>{});funSfx('win');funConfetti()}
    else if(mine){FUN.over={h:'Not yet',p:'That card is not quite there. On we go.'};funSay(['bingo_no'])}
    setTimeout(()=>{FUN.over=null;funPaint()},c.valid?9000:3500)}
  }else{
   if(st.draws.length>sn.draws){const d=st.draws[st.draws.length-1],dg=fTk(d.number).split('');sn.draws=st.draws.length;FUN.hide=d.prize_no;
    /* the build-up: drum, then one number at a time with a roll before each */
-   const seq=[d.prize_no<=5&&d.prize_no===st.prizes.length?'prize_1':'prize_next',()=>{FUN.spin=true;FUN.rev={d:dg,k:0,roll:-1,prize:d.prize};funPaint()},'raffle_spin',2200,'raffle_ticket',500];
+   const seq=(FUN.fair?[]:['raffle_fair',400]).concat([d.prize_no<=5&&d.prize_no===st.prizes.length?'prize_1':'prize_next',()=>{FUN.spin=true;FUN.rev={d:dg,k:0,roll:-1,prize:d.prize};funPaint()},'raffle_spin',2200,'raffle_ticket',500]);FUN.fair=true;
    dg.forEach((x,i)=>seq.push('raffle_n'+(i+1),()=>funRoll(i),i===3?3400:1700+i*350,()=>{funRollStop();if(FUN.rev){FUN.rev.k=i+1;FUN.rev.roll=-1;FUN.rev.pop=true;setTimeout(()=>{if(FUN.rev)FUN.rev.pop=false},450)}funSfx('lock');funPaint()},'digit_'+x,i===2?'raffle_close':i===3?1500:450));
-   funSay(seq,()=>{funRollStop();FUN.spin=false;FUN.hide=null;FUN.rev=null;const mine=d.user===st.me;FUN.over={h:mine?'YOU WON!':'We have a winner!',p:`Ticket ${fTk(d.number)} · ${esc(d.name||'')}${d.prize?' wins '+esc(d.prize):''}`,win:d.user};funSfx('win');funConfetti();funSay(['raffle_winner'].concat(funNm(d.user)||[]));funPaint();setTimeout(()=>{FUN.over=null;funPaint()},9000)})}
+   funSay(seq,()=>{funRollStop();FUN.spin=false;FUN.hide=null;FUN.rev=null;const mine=d.user===st.me;FUN.over={h:mine?'YOU WON!':'We have a winner!',p:`Ticket ${fTk(d.number)} · ${esc(d.name||'')}${d.prize?' wins '+esc(d.prize):''}`,win:d.user};funSfx('win');funConfetti();funClap();funSay(['raffle_winner'].concat(funNm(d.user)||[]));funPaint();setTimeout(()=>{FUN.over=null;funPaint()},9000)})}
  }
  if(s.announce&&s.announce.ts!==sn.ann){sn.ann=s.announce.ts;if(s.announce.url){const a=new Audio(s.announce.url);a.volume=1;a.play().catch(()=>{})}}
  funTalkRules();
@@ -224,7 +225,7 @@ V.funroom=function(){
   const rv=FUN.rev,pre=rv?rv.d.slice(0,rv.k).join(''):'',inn=t=>fTk(t.number).startsWith(pre),mIn=rv?FUN.tix.filter(inn).length:0;
   const rmsg=!rv?'':rv.k===0?'Good luck, everyone!':rv.k===4?'Check your tickets…':mIn?(rv.k===3?'One number away! ':'')+`${mIn} of your tickets ${mIn===1?'is':'are'} still in!`:(FUN.tix.length?'Not yours this time. Fingers crossed for your table!':'');
   const rev=rv?`<div class="fn-rev"><small>${rv.prize?'Drawing: '+esc(rv.prize):'The winning ticket'}</small><div class="fn-revd">${[0,1,2,3].map(i=>`<span class="${i<rv.k?'on'+(rv.pop&&i===rv.k-1?' pop':''):i===rv.roll?'roll':''}"${i===rv.roll?' id="fn-roll"':''}>${i<rv.k?rv.d[i]:i===rv.roll?'?':'·'}</span>`).join('')}</div><p>${rmsg}</p></div>`:'';
-  game=`<img class="fn-drum${FUN.spin?' spin':''}" src="${FI}drum.png" alt=""><div class="fn-call" style="margin-top:10px"><div><small>${st.status==='live'?(FUN.spin?'The drum is spinning':'Good luck!'):'Waiting for the start'}</small><b>${shown.length?`Last winner: ticket ${fTk(shown[shown.length-1].number)}`:`${st.prizes.length} prize${st.prizes.length===1?'':'s'} tonight`}</b></div></div>${rev}
+  game=`<img class="fn-drum${FUN.spin?' spin':''}" src="${FI}drum.png" alt=""><div class="fn-call" style="margin-top:10px"><div><small>${st.status==='live'?(FUN.spin?'The drum is spinning':'Good luck!'):'Waiting for the start'}</small><b>${shown.length?`Last winner: ticket ${fTk(shown[shown.length-1].number)}`:`${st.prizes.length} prize${st.prizes.length===1?'':'s'} tonight`}</b></div></div><p style="margin:8px 4px 0;font-size:13px;color:#fff3dc;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.5)">Every ticket number and every winner is picked by an automated system, never by hand.</p>${rev}
   <div class="fn-rt">${FUN.tix.map(t=>`<span class="fn-rtk${won[t.number]?' w':''}${rv&&rv.k?(inn(t)?' in':' out'):''}">${fTk(t.number)}</span>`).join('')}</div>
   ${shown.length?`<div class="card" style="margin-top:14px"><b>Winners so far</b>${shown.map(d=>`<div class="row" style="justify-content:space-between;gap:8px;margin-top:6px"><span>${esc(d.prize||'Prize '+d.prize_no)}</span><b>${fTk(d.number)} · ${esc((d.name||'').split(' ')[0])}</b></div>`).join('')}</div>`:''}`;
  }
