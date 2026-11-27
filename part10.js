@@ -173,7 +173,7 @@ function funNext(){
 }
 function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
 function funPre(list){list.forEach(f=>{if(!f||FAUD[f])return;try{const a=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3');a.preload='auto';a.load();FAUD[f]=a}catch(e){}})}
-function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
+function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','goodbye_day','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
  const rest=game==='raffle'?[0,1,2,3,4,5,6,7,8,9].map(d=>'digit_'+d):Array.from({length:90},(_,i)=>['nick_'+(i+1),'num_'+(i+1)]).flat();let i=0;clearInterval(FUN.preT);FUN.preT=setInterval(()=>{if(i>=rest.length||!FUN.id)return clearInterval(FUN.preT);funPre(rest.slice(i,i+4));i+=4},350)}
 function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.95*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
 function funRoll(i){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();FUN.rollT=setInterval(()=>{const e=document.getElementById('fn-roll');if(e)e.textContent=Math.floor(Math.random()*10);funSfx('tick')},90)}
@@ -186,7 +186,7 @@ async function funEnterRoom(id){
  try{FUN.tix=(await frpc('fun_my_tickets',{p_night:id}))||[]}catch(e){FUN.tix=[]}
  try{FUN.marks=JSON.parse(localStorage.getItem('fn-m-'+id)||'{}')}catch(e){FUN.marks={}}
  await funSync(true);push('funroom',{id});
- funPreAll(FUN.st&&FUN.st.game);(FUN.st&&FUN.st.seats||[]).forEach(x=>funPre([funNm(x.id)]));FUN.wl={at:Date.now(),n:1};const h=new Date().getHours(),mine=funNm(FUN.st&&FUN.st.me);funSay([h<17&&h>=5?'welcome_afternoon':'welcome_evening',300].concat(mine?['welcome_name',mine]:['welcome_all']));
+ funPreAll(FUN.st&&FUN.st.game);(FUN.st&&FUN.st.seats||[]).forEach(x=>funPre([funNm(x.id)]));FUN.wl={at:Date.now(),n:1};const h=new Date().getHours(),mine=funNm(FUN.st&&FUN.st.me);funSay([h>=5&&h<12?'welcome_morning':h>=12&&h<17?'welcome_afternoon':'welcome_evening',300].concat(mine?['welcome_name',mine]:['welcome_all']));
  clearInterval(FUN.timer);FUN.timer=setInterval(()=>funSync(),4000);
  try{if(FUN.ch)sb.removeChannel(FUN.ch);FUN.ch=sb.channel('fun:'+id).on('broadcast',{event:'tick'},()=>funSync()).subscribe()}catch(e){}
 }
@@ -196,7 +196,7 @@ const _popall10=popall;popall=function(){if(S.stack.some(x=>x.v==='funroom'))fun
 ACT.pop=()=>pop();ACT.popall=()=>popall();
 async function funSync(first){
  if(!FUN.id)return;let st;try{st=await frpc('fun_state',{p_night:FUN.id})}catch(e){return}
- if(!st||st.closed){if(!first&&FUN.st){funSay(['goodnight']);toast('The night has finished. Thank you for playing!');const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')pop()}return}
+ if(!st||st.closed){if(!first&&FUN.st){funSay([(()=>{const h=new Date().getHours();return h>=5&&h<17?'goodbye_day':'goodnight'})()]);toast('The night has finished. Thank you for playing!');const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')pop()}return}
  const prev=FUN.st,sn=FUN.seen;FUN.st=st;const s=st.state||{};
  if(sn.calls<0){sn.calls=st.calls.length;sn.draws=st.draws.length;sn.claim=st.claim&&st.claim.id;sn.stage=s.stage;sn.ann=s.announce&&s.announce.ts;sn.live=st.status==='live';sn.round=st.round;sn.joining=!!s.joining;sn.ids={};st.seats.forEach(x=>sn.ids[x.id]=1)}
  if(sn.ids){const nw=[];st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u){funPre([u]);if(st.status!=='live'&&x.id!==st.me)nw.push(u)}});
