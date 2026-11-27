@@ -65,6 +65,22 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 @keyframes fnfall{to{transform:translateY(105vh) rotate(720deg)}}
 .fn-rev{background:#fff8ea;color:#3a2a1e;border-radius:18px;padding:14px 10px;text-align:center;margin-top:10px;box-shadow:0 4px 10px rgba(0,0,0,.25)}
 .fn-rev small{color:#8a6a4f;font-size:13px;display:block}.fn-rev p{margin:0;font-weight:700;min-height:1.5em}
+.fn-lb{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font:800 22px/1 ui-monospace,monospace;font-style:normal;color:#3a2a1e;background:radial-gradient(circle at 34% 28%,#fff6c9,#ffd23f 55%,#d99a12);box-shadow:inset 0 -3px 5px rgba(0,0,0,.18),0 2px 4px rgba(0,0,0,.3)}
+.fn-mix{position:relative;height:118px;margin:10px 0 0;border-radius:18px;overflow:hidden;background:radial-gradient(circle at 50% 40%,#2c4a7c,#14213d 75%);box-shadow:inset 0 0 0 3px #c9a03c,inset 0 0 26px rgba(0,0,0,.6);--s:5}
+.fn-mix.go{--s:1}
+.fn-mix i{position:absolute;left:3%;top:6%;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font:800 14px/1 ui-monospace,monospace;font-style:normal;color:#3a2a1e;background:radial-gradient(circle at 34% 28%,#fff,#f1e4c3 60%,#c9b384);box-shadow:0 2px 3px rgba(0,0,0,.45);animation:fnmxx calc(var(--a)*var(--s)) ease-in-out infinite alternate,fnmxy calc(var(--b)*var(--s)) ease-in-out infinite alternate;animation-delay:var(--d),var(--e)}
+.fn-mix.go i{filter:blur(.6px)}
+@keyframes fnmxx{to{left:calc(97% - 26px)}}@keyframes fnmxy{to{top:calc(94% - 26px)}}
+.fn-mix b{position:absolute;left:50%;top:50%;width:86px;height:86px;margin:-43px 0 0 -43px;border-radius:50%;display:grid;place-items:center;font:800 54px/1 ui-monospace,monospace;color:#3a2a1e;background:radial-gradient(circle at 34% 28%,#fff6c9,#ffd23f 55%,#d99a12);box-shadow:0 0 0 4px rgba(255,255,255,.35),0 6px 16px rgba(0,0,0,.55),inset 0 -6px 10px rgba(0,0,0,.18);z-index:2}
+.fn-mix b.idle{opacity:.5;font-size:40px}.fn-mix b.hit{animation:fnhit .35s ease-out}
+@keyframes fnhit{0%{transform:scale(1)}45%{transform:scale(1.28);box-shadow:0 0 0 10px rgba(255,255,255,.7),0 0 40px #ffd23f}100%{transform:scale(1)}}
+.fn-balls{display:flex;gap:12px;justify-content:center;margin:12px 0 8px}
+.fn-balls span{width:56px;height:56px;border-radius:50%;display:grid;place-items:center;font:800 30px/1 ui-monospace,monospace;color:#b89a6c;border:2px dashed #c9a676;background:#ead9b8}
+.fn-balls .on{border:0;color:#3a2a1e;background:radial-gradient(circle at 34% 28%,#fff6c9,#ffd23f 55%,#d99a12);box-shadow:inset 0 -4px 7px rgba(0,0,0,.18),0 3px 6px rgba(0,0,0,.35)}
+.fn-balls .fly{position:relative;z-index:3;animation:fnfly .6s cubic-bezier(.3,.9,.4,1.1)}
+@keyframes fnfly{from{transform:translate(var(--dx),var(--dy)) scale(1.5)}to{transform:none}}
+@media(prefers-reduced-motion:reduce){.fn-mix i{animation:none}}
+@media(max-height:720px){.fn-mix{height:88px;margin-top:6px}.fn-mix b{width:70px;height:70px;margin:-35px 0 0 -35px;font-size:44px}.fn-balls{margin:8px 0 4px;gap:10px}.fn-balls span{width:44px;height:44px;font-size:24px}.fn-v .fn-rev{padding:8px 10px}}
 .fn-revd{display:flex;gap:8px;justify-content:center;margin:10px 0}
 .fn-revd span{width:56px;height:68px;border-radius:10px;background:#ead9b8;display:grid;place-items:center;font:800 34px/1 ui-monospace,monospace;border:2px dashed #c9a676;color:#8a6a4f}
 .fn-revd .on{background:#ffe38a;border-style:solid;border-color:#c9a03c;color:#3a2a1e}.fn-revd .pop{animation:fnpop .4s ease-out}
@@ -182,8 +198,10 @@ function funPre(list){list.forEach(f=>{if(!f||FAUD[f])return;try{const a=new Aud
 function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','goodbye_day','how_to','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
  const rest=game==='raffle'?[0,1,2,3,4,5,6,7,8,9].map(d=>'digit_'+d):Array.from({length:90},(_,i)=>['nick_'+(i+1),'num_'+(i+1)]).flat();let i=0;clearInterval(FUN.preT);FUN.preT=setInterval(()=>{if(i>=rest.length||!FUN.id)return clearInterval(FUN.preT);funPre(rest.slice(i,i+4));i+=4},350)}
 function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.95*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
-function funRoll(i){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();FUN.rollT=setInterval(()=>{const e=document.getElementById('fn-roll');if(e)e.textContent=Math.floor(Math.random()*10);funSfx('tick')},90)}
-function funRollStop(){clearInterval(FUN.rollT);FUN.rollT=null}
+function funRoll(i,dur){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();const t0=Date.now(),fin=FUN.rev.d[i];dur=dur||1600;let last=-1;
+ const step=()=>{const e=document.getElementById('fn-big'),p=(Date.now()-t0)/dur,w=45+430*p*p*p;if(p>=1||(dur-(Date.now()-t0))<w*.6){if(e){e.textContent=fin;e.classList.add('hit')}funSfx('tick');FUN.rollT=null;return}
+  let n;do{n=Math.floor(Math.random()*10)}while(n===last);last=n;if(e)e.textContent=n;if(w>70||n%2)funSfx('tick');FUN.rollT=setTimeout(step,w)};step()}
+function funRollStop(){clearTimeout(FUN.rollT);FUN.rollT=null}
 async function funTix(){try{FUN.tix=(await frpc('fun_my_tickets',{p_night:FUN.id}))||[]}catch(e){}funPaint()}
 
 /* ---------- entering and syncing the room ---------- */
@@ -222,7 +240,7 @@ async function funSync(first){
   if(st.draws.length>sn.draws){const d=st.draws[st.draws.length-1],dg=fTk(d.number).split('');sn.draws=st.draws.length;FUN.hide=d.prize_no;
    /* the build-up: drum, then one number at a time with a roll before each */
    const seq=(FUN.fair?[]:['raffle_fair',400]).concat([d.prize_no<=5&&d.prize_no===st.prizes.length?'prize_1':'prize_next',()=>{FUN.spin=true;FUN.rev={d:dg,k:0,roll:-1,prize:d.prize};funPaint()},'raffle_spin',2200,'raffle_ticket',500]);FUN.fair=true;
-   dg.forEach((x,i)=>seq.push('raffle_n'+(i+1),()=>funRoll(i),i===3?3400:1700+i*350,()=>{funRollStop();if(FUN.rev){FUN.rev.k=i+1;FUN.rev.roll=-1;FUN.rev.pop=true;setTimeout(()=>{if(FUN.rev)FUN.rev.pop=false},450)}funSfx('lock');funPaint()},'digit_'+x,i===2?'raffle_close':i===3?1500:450));
+   dg.forEach((x,i)=>{const du=i===3?3600:1900+i*350;seq.push('raffle_n'+(i+1),()=>funRoll(i,du),du+450,()=>{funRollStop();if(FUN.rev){let fl=null;try{const b=document.getElementById('fn-big').getBoundingClientRect(),c=document.querySelectorAll('.fn-balls span')[i].getBoundingClientRect();fl=[Math.round(b.left+b.width/2-c.left-c.width/2),Math.round(b.top+b.height/2-c.top-c.height/2)]}catch(e){}FUN.rev.k=i+1;FUN.rev.roll=-1;FUN.rev.fly=fl;setTimeout(()=>{if(FUN.rev)FUN.rev.fly=null},700)}funSfx('lock');funPaint()},'digit_'+x,i===2?'raffle_close':i===3?1500:450)});
    funSay(seq,()=>{funRollStop();FUN.spin=false;FUN.hide=null;FUN.rev=null;const mine=d.user===st.me;FUN.over={h:mine?'YOU WON!':'We have a winner!',p:`Ticket ${fTk(d.number)} · ${esc(d.name||'')}${d.prize?' wins '+esc(d.prize):''}`,win:d.user};funSfx('win');funConfetti();funClap();funSay(['raffle_winner'].concat(funNm(d.user)||[]));funPaint();setTimeout(()=>{FUN.over=null;funPaint()},9000)})}
  }
  if(s.announce&&s.announce.ts!==sn.ann){sn.ann=s.announce.ts;if(s.announce.url){const a=new Audio(s.announce.url);a.volume=1;a.play().catch(()=>{})}}
@@ -273,10 +291,10 @@ V.funroom=function(){
   const shown=st.draws.filter(d=>d.prize_no!==FUN.hide),won={};shown.forEach(d=>won[d.number]=1);
   const rv=FUN.rev,pre=rv?rv.d.slice(0,rv.k).join(''):'',inn=t=>fTk(t.number).startsWith(pre),mIn=rv?FUN.tix.filter(inn).length:0;
   const rmsg=!rv?'':rv.k===0?'Good luck, everyone!':rv.k===4?'Check your tickets…':mIn?(rv.k===3?'One number away! ':'')+`${mIn} of your tickets ${mIn===1?'is':'are'} still in!`:(FUN.tix.length?'Not yours this time. Fingers crossed for your table!':'');
-  const rev=rv?`<div class="fn-rev"><small>${rv.prize?'Drawing: '+esc(rv.prize):'The winning ticket'}</small><div class="fn-revd">${[0,1,2,3].map(i=>`<span class="${i<rv.k?'on'+(rv.pop&&i===rv.k-1?' pop':''):i===rv.roll?'roll':''}"${i===rv.roll?' id="fn-roll"':''}>${i<rv.k?rv.d[i]:i===rv.roll?'?':'·'}</span>`).join('')}</div><p>${rmsg}</p></div>`:'';
+  const rev=rv?`<div class="fn-rev"><small>${rv.prize?'Drawing: '+esc(rv.prize):'The winning ticket'}</small><div class="fn-mix${rv.k<4?' go':''}">${[0,1,2,3,4,5,6,7,8,9].map(n=>`<i style="--a:${(.5+((n*37)%10)*.045).toFixed(2)}s;--b:${(.38+((n*53)%10)*.05).toFixed(2)}s;--d:-${(n*.17).toFixed(2)}s;--e:-${(n*.29).toFixed(2)}s">${n}</i>`).join('')}<b id="fn-big"${rv.roll<0?' class="idle"':''}>${rv.k===4?'★':'?'}</b></div><div class="fn-balls">${[0,1,2,3].map(i=>`<span class="${i<rv.k?'on'+(rv.fly&&i===rv.k-1?' fly':''):''}"${rv.fly&&i===rv.k-1?` style="--dx:${rv.fly[0]}px;--dy:${rv.fly[1]}px"`:''}>${i<rv.k?rv.d[i]:''}</span>`).join('')}</div><p>${rmsg}</p></div>`:'';
   const wins=shown.length?`<b>Winners so far</b>${shown.map(d=>`<div class="row" style="justify-content:space-between;gap:8px;margin-top:6px"><span>${esc(d.prize||'Prize '+d.prize_no)}</span><b>${fTk(d.number)} · ${esc((d.name||'').split(' ')[0])}</b></div>`).join('')}`:'';
-  game=`<div class="fn-call"><img class="fn-drum${FUN.spin?' spin':''}" src="${FI}drum.png" alt=""><div class="grow"><small>${st.status==='live'?(FUN.spin?'The drum is spinning':'Good luck!'):'Waiting for the start'}</small><b>${shown.length?`Last winner: ticket ${fTk(shown[shown.length-1].number)}`:`${st.prizes.length} prize${st.prizes.length===1?'':'s'} tonight`}</b></div></div>
-  <p class="fn-fair">Every ticket number and every winner is picked by an automated system, never by hand.</p>${rev}
+  game=`${rv?'':`<div class="fn-call"><i class="fn-lb">?</i><div class="grow"><small>${st.status==='live'?(FUN.spin?'The numbers are mixing':'Good luck!'):'Waiting for the start'}</small><b>${shown.length?`Last winner: ticket ${fTk(shown[shown.length-1].number)}`:`${st.prizes.length} prize${st.prizes.length===1?'':'s'} tonight`}</b></div></div>
+  <p class="fn-fair">Every ticket number and every winner is picked by an automated system, never by hand.</p>`}${rev}
   <div class="fn-rt">${FUN.tix.map(t=>`<span class="fn-rtk${won[t.number]?' w':''}${rv&&rv.k?(inn(t)?' in':' out'):''}">${fTk(t.number)}</span>`).join('')}</div>
   ${wins?`<div class="card fn-wins" style="margin-top:12px">${wins}</div>`:''}`;
   side=`<div class="fn-info"><h4>Tonight's prizes</h4>${prizes}</div>`;
