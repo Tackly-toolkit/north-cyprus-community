@@ -52,7 +52,7 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fn-row{display:flex;gap:12px;align-items:center;margin-top:16px}
 .fn-tray{flex:1;background:#7a5238;border-radius:16px;padding:10px 12px;display:flex;gap:8px;align-items:center;box-shadow:inset 0 3px 6px rgba(0,0,0,.4);color:#fff3df;font-size:13px;min-width:0}
 .fn-chipc{width:38px;height:38px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8d7a,#d2372a 60%,#a3221a);box-shadow:0 2px 3px rgba(0,0,0,.4);flex:none;touch-action:none;cursor:grab}
-.fn-drag{position:fixed;z-index:90;pointer-events:none;width:46px;height:46px;margin:-23px 0 0 -23px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8d7a,#d2372a 60%,#a3221a);box-shadow:0 8px 14px rgba(0,0,0,.45)}
+.fn-drag{position:fixed;z-index:500;pointer-events:none;width:34px;height:34px;margin:-17px 0 0 -17px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8d7a,#d2372a 60%,#a3221a);box-shadow:0 8px 14px rgba(0,0,0,.45)}
 .fn-bingo{background:#2f7d4f;color:#fff;border:0;border-radius:18px;padding:16px 20px;font:800 20px var(--bf);box-shadow:0 5px 0 #1f5a37}
 .fn-rt{display:flex;flex-wrap:wrap;gap:10px;justify-content:center;margin-top:12px}
 .fn-rtk{background:#fff8ea;color:#3a2a1e;border-radius:8px;padding:10px 16px;font:800 22px ui-monospace,monospace;letter-spacing:.1em;box-shadow:0 5px 10px rgba(0,0,0,.3);border:2px dashed #c9a676;transform:rotate(-1.5deg)}
@@ -94,6 +94,11 @@ document.head.insertAdjacentHTML('beforeend',`<style>
 .fn-book .fn-tk{background:#fffaf0;border:0;border-radius:9px;padding:3px;margin:0;display:block;box-shadow:0 2px 5px rgba(0,0,0,.3);min-width:0}.fn-book .fn-tk.hot{box-shadow:0 0 0 3px #f6c343,0 2px 8px rgba(0,0,0,.4)}
 .fn-r{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:2px;margin-bottom:2px}.fn-r:last-child{margin-bottom:0}
 .fn-book .fn-c{aspect-ratio:38/48;background:#fff;border:1px solid #d8c7a4;border-radius:4px;font:800 clamp(11px,2.95vw,20px)/1 var(--bf);letter-spacing:-.3px;min-width:0}.fn-book .fn-c.e{background:#f1e4c9;border-color:transparent}.fn-book .fn-c.now{background:#ffe9a6;border-color:#c9a03c}.fn-book .fn-c.d:after{inset:6% 2%}
+.fn-tray2{display:flex;align-items:center;gap:10px;background:#7a5238;border-radius:14px;padding:6px 10px;box-shadow:inset 0 3px 6px rgba(0,0,0,.4);color:#fff3df;font-size:12.5px;line-height:1.25}.fn-tray2 span{min-width:0}
+.fn-pile{display:flex;flex:none;touch-action:none;cursor:grab;padding:2px 0}.fn-pile .fn-chipc{width:30px;height:30px;margin-left:-13px;pointer-events:none}.fn-pile .fn-chipc:first-child{margin-left:0}
+.fn-hand{position:fixed;left:0;top:0;z-index:350;pointer-events:none;font-size:34px;line-height:1;filter:drop-shadow(0 3px 4px rgba(0,0,0,.5))}.fn-hand:before{content:"";position:absolute;left:4px;top:-20px;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#ff8d7a,#d2372a 60%,#a3221a);box-shadow:0 2px 3px rgba(0,0,0,.4)}
+.fn-tutb{position:fixed;left:50%;transform:translateX(-50%);z-index:349;background:rgba(31,45,40,.95);color:#fff;border-radius:16px;padding:10px 14px;font:700 14px/1.35 var(--bf);text-align:center;width:min(88vw,360px);box-shadow:0 8px 22px rgba(0,0,0,.4);pointer-events:none}
+@media(min-width:700px){.fn-pile .fn-chipc{width:38px;height:38px}.fn-tray2{font-size:14px;padding:8px 14px}}
 .fn-v .fn-drum{width:64px;height:auto;margin:0;flex:none}
 .fn-fair{margin:0 4px;font-size:12.5px;color:#fff3dc;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.5)}
 .fn-v .fn-rev{margin-top:0}.fn-v .fn-join{margin-top:0}
@@ -173,7 +178,7 @@ function funNext(){
 }
 function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
 function funPre(list){list.forEach(f=>{if(!f||FAUD[f])return;try{const a=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3');a.preload='auto';a.load();FAUD[f]=a}catch(e){}})}
-function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','goodbye_day','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
+function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','goodbye_day','how_to','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
  const rest=game==='raffle'?[0,1,2,3,4,5,6,7,8,9].map(d=>'digit_'+d):Array.from({length:90},(_,i)=>['nick_'+(i+1),'num_'+(i+1)]).flat();let i=0;clearInterval(FUN.preT);FUN.preT=setInterval(()=>{if(i>=rest.length||!FUN.id)return clearInterval(FUN.preT);funPre(rest.slice(i,i+4));i+=4},350)}
 function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.95*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
 function funRoll(i){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();FUN.rollT=setInterval(()=>{const e=document.getElementById('fn-roll');if(e)e.textContent=Math.floor(Math.random()*10);funSfx('tick')},90)}
@@ -190,7 +195,7 @@ async function funEnterRoom(id){
  clearInterval(FUN.timer);FUN.timer=setInterval(()=>funSync(),4000);
  try{if(FUN.ch)sb.removeChannel(FUN.ch);FUN.ch=sb.channel('fun:'+id).on('broadcast',{event:'tick'},()=>funSync()).subscribe()}catch(e){}
 }
-function funLeave(){clearInterval(FUN.timer);FUN.timer=null;try{if(FUN.ch)sb.removeChannel(FUN.ch)}catch(e){}FUN.ch=null;funTalkOff();funRollStop();FUN.rev=null;FUN.q=[];FUN.id=null}
+function funLeave(){clearInterval(FUN.timer);FUN.timer=null;try{if(FUN.ch)sb.removeChannel(FUN.ch)}catch(e){}FUN.ch=null;funTalkOff();funRollStop();funTut(false);FUN.rev=null;FUN.q=[];FUN.id=null}
 const _pop10=pop;pop=function(){const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')funLeave();return _pop10.apply(this,arguments)};
 const _popall10=popall;popall=function(){if(S.stack.some(x=>x.v==='funroom'))funLeave();return _popall10.apply(this,arguments)};
 ACT.pop=()=>pop();ACT.popall=()=>popall();
@@ -202,7 +207,7 @@ async function funSync(first){
  if(sn.ids){const nw=[];st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u){funPre([u]);if(st.status!=='live'&&x.id!==st.me)nw.push(u)}});
   /* names flow one after another; "Welcome" is only said now and then, not before every name */
   if(nw.length){const w=FUN.wl||(FUN.wl={at:0,n:0}),say=Date.now()-w.at>20000||w.n>=4;if(say)w.n=0;w.n+=nw.length;w.at=Date.now();funSay((say?['welcome_name']:[]).concat(nw.flatMap((u,i)=>i?[120,u]:[u])))}}
- if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;funSay(st.game==='bingo'?['eyes_down',300,'stage_'+(s.stage||1)]:['raffle_intro',300,'raffle_fair']);if(st.game==='raffle')FUN.fair=true}
+ if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;let tut=false;try{tut=st.game==='bingo'&&FUN.tix.length&&!localStorage.getItem('fn-tut-'+FUN.id);if(tut)localStorage.setItem('fn-tut-'+FUN.id,'1')}catch(e){}funSay(st.game==='bingo'?(tut?[()=>funTut(true),'how_to',()=>funTut(false),300]:[]).concat(['eyes_down',300,'stage_'+(s.stage||1)]):['raffle_intro',300,'raffle_fair']);if(st.game==='raffle')FUN.fair=true}
  if(st.game==='bingo'){
   if(st.round!==sn.round){sn.round=st.round;sn.calls=st.calls.length;sn.stage=s.stage;sn.joining=!!s.joining;FUN.marks={};try{localStorage.removeItem('fn-m-'+FUN.id)}catch(e){}FUN.tix=[];FUN.skip=false;funSay(['round_new']);funTix()}
   if(sn.joining&&!s.joining){funSay(['eyes_down',300,'stage_1'])}sn.joining=!!s.joining;
@@ -261,7 +266,7 @@ V.funroom=function(){
   const book=FUN.tix.map(t=>{const m=FUN.marks[t.id]||{},hot=last&&!m[last]&&t.card.some(r=>r.includes(last));return `<div class="fn-tk${hot?' hot':''}">${t.card.map(row=>`<div class="fn-r">${row.map(n=>n===null?'<span class="fn-c e"></span>':`<button class="fn-c${m[n]?' d':''}${n===last&&!m[n]?' now':''}" data-act="funmark" data-tk="${t.id}" data-n="${n}">${n}</button>`).join('')}</div>`).join('')}</div>`}).join('');
   game=`<div class="fn-call">${last?`<div class="fn-ball">${last}</div><div class="grow"><small>George just called</small><b>${esc(NICK[last]||'')}</b></div>`:`<div class="fn-ball">?</div><div class="grow"><small>${st.status==='live'?'Eyes down':'Waiting for the start'}</small><b>${st.status==='live'?'First number coming up':'Find your seat and get comfy'}</b></div>`}<span class="pill" style="flex:none">${rd>1?'Round '+rd+' · ':''}${['One line','Two lines','Full house'][stage-1]}</span>${st.status==='live'&&FUN.tix.length?'<button class="fn-bingo" data-act="funbingo">Bingo!</button>':''}</div>
   <div class="fn-called"><b>Latest:</b><span>${st.calls.length?'<i>'+last+'</i>'+st.calls.slice(-13,-1).reverse().map(n=>' · '+n).join(''):'nothing yet'}</span><em>${st.calls.length} of 90</em></div>${join}
-  ${FUN.tix.length?`<div class="fn-book n${FUN.tix.length}">${book}</div>`:''}`;
+  ${FUN.tix.length?`<div class="fn-book n${FUN.tix.length}">${book}</div><div class="fn-tray2"><div class="fn-pile" id="fn-src">${'<i class="fn-chipc"></i>'.repeat(7)}</div><span><b>${Math.max(0,90-Object.values(FUN.marks).reduce((a,m)=>a+Object.keys(m).length,0))} red counters.</b> Slide one onto each number George calls.</span></div>`:''}`;
   side=`<div class="fn-info"><h4>Called so far</h4><p>${st.calls.length?st.calls.join(' · '):'Nothing yet'}</p><h4>Tonight's prizes</h4>${prizes}</div>`;
  }else{
   const shown=st.draws.filter(d=>d.prize_no!==FUN.hide),won={};shown.forEach(d=>won[d.number]=1);
@@ -293,14 +298,20 @@ ACT.funmute=d=>{FUN.talk.muted[d.id]=!FUN.talk.muted[d.id];funTalkRules();closeS
 
 /* ---------- bingo: tap or drag a counter, then call Bingo ---------- */
 function funSetMark(tk,n,on){const m=FUN.marks[tk]=FUN.marks[tk]||{};if(on===undefined)on=!m[n];if(on)m[n]=1;else delete m[n];try{localStorage.setItem('fn-m-'+FUN.id,JSON.stringify(FUN.marks))}catch(e){}funSfx('dab')}
-ACT.funmark=(d,el)=>{funSetMark(d.tk,d.n);funPaint()};
+ACT.funmark=(d,el)=>{const m=FUN.marks[d.tk]||{};if(m[d.n]){funSetMark(d.tk,d.n,false);funPaint()}else toast('Slide a red counter from the bottom onto the number')};
 document.addEventListener('pointerdown',e=>{
  if(!e.target.closest||!e.target.closest('#fn-src'))return;e.preventDefault();FUN.dragging=true;
  const g=document.createElement('div');g.className='fn-drag';document.body.appendChild(g);let hot=null;
- const mv=ev=>{g.style.left=ev.clientX+'px';g.style.top=ev.clientY+'px';const c=document.elementFromPoint(ev.clientX,ev.clientY-18),b=c&&c.closest&&c.closest('button.fn-c');if(hot&&hot!==b)hot.classList.remove('hot');hot=b||null;if(hot)hot.classList.add('hot')};
- const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);g.remove();FUN.dragging=false;if(hot){hot.classList.remove('hot');funSetMark(hot.dataset.tk,hot.dataset.n,true);hot.classList.add('d')}};
+ const cells=[...document.querySelectorAll('.fn-book button.fn-c')].map(b=>{const r=b.getBoundingClientRect();return {b,x:r.left+r.width/2,y:r.top+r.height/2}});
+ const mv=ev=>{const px=ev.clientX,py=ev.clientY-26;g.style.left=px+'px';g.style.top=(py+18)+'px';let best=null,bd=34*34;for(const c of cells){const d=(c.x-px)*(c.x-px)+(c.y-py)*(c.y-py);if(d<bd){bd=d;best=c.b}}if(hot&&hot!==best)hot.classList.remove('hot');hot=best;if(hot)hot.classList.add('hot')};
+ const up=()=>{document.removeEventListener('pointermove',mv);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);g.remove();FUN.dragging=false;if(hot){hot.classList.remove('hot');funSetMark(hot.dataset.tk,hot.dataset.n,true)}funPaint()};
  mv(e);document.addEventListener('pointermove',mv);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
 });
+/* a short how-to before the first number: a hand slides a counter from the tray onto a number while George explains */
+function funTut(on){document.querySelectorAll('.fn-hand,.fn-tutb').forEach(e=>e.remove());if(!on)return;try{const src=document.getElementById('fn-src'),cell=document.querySelector('.fn-book .fn-tk:nth-child(2) button.fn-c')||document.querySelector('.fn-book button.fn-c');if(!src||!cell)return;const a=src.getBoundingClientRect(),c=cell.getBoundingClientRect(),h=document.createElement('div');h.className='fn-hand';h.textContent='👆';document.body.appendChild(h);
+ const x0=a.left+a.width/2-17,y0=a.top+6,x1=c.left+c.width/2-17,y1=c.top+c.height/2+8;h.animate([{transform:`translate(${x0}px,${y0}px)`,opacity:0},{transform:`translate(${x0}px,${y0}px)`,opacity:1,offset:.12},{transform:`translate(${x1}px,${y1}px)`,opacity:1,offset:.62},{transform:`translate(${x1}px,${y1}px)`,opacity:1,offset:.86},{transform:`translate(${x1}px,${y1}px)`,opacity:0}],{duration:2600,iterations:Infinity,easing:'ease-in-out'});
+ const bx=document.createElement('div');bx.className='fn-tutb';bx.textContent='How to play: slide a red counter onto each number George calls.';const bk=document.querySelector('.fn-book').getBoundingClientRect();bx.style.top=Math.max(70,bk.top-64)+'px';document.body.appendChild(bx)}catch(e){}}
+
 ACT.funbingo=async d=>{const bt=d.id?{id:d.id}:funBest();if(!bt)return;try{await frpc('fun_claim',{p_night:FUN.id,p_ticket:bt.id});funTick();funSync()}catch(e){fErr(e)}};
 function funTick(){try{if(FUN.ch)FUN.ch.send({type:'broadcast',event:'tick',payload:{}})}catch(e){}}
 
