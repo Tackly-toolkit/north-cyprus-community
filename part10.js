@@ -172,7 +172,10 @@ function funNext(){
  a.onended=go;a.onerror=go;a.play().catch(go);setTimeout(go,9000);
 }
 function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
-function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.6*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
+function funPre(list){list.forEach(f=>{if(!f||FAUD[f])return;try{const a=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3');a.preload='auto';a.load();FAUD[f]=a}catch(e){}})}
+function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
+ const rest=game==='raffle'?[0,1,2,3,4,5,6,7,8,9].map(d=>'digit_'+d):Array.from({length:90},(_,i)=>['nick_'+(i+1),'num_'+(i+1)]).flat();let i=0;clearInterval(FUN.preT);FUN.preT=setInterval(()=>{if(i>=rest.length||!FUN.id)return clearInterval(FUN.preT);funPre(rest.slice(i,i+4));i+=4},350)}
+function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.95*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
 function funRoll(i){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();FUN.rollT=setInterval(()=>{const e=document.getElementById('fn-roll');if(e)e.textContent=Math.floor(Math.random()*10);funSfx('tick')},90)}
 function funRollStop(){clearInterval(FUN.rollT);FUN.rollT=null}
 async function funTix(){try{FUN.tix=(await frpc('fun_my_tickets',{p_night:FUN.id}))||[]}catch(e){}funPaint()}
@@ -183,7 +186,7 @@ async function funEnterRoom(id){
  try{FUN.tix=(await frpc('fun_my_tickets',{p_night:id}))||[]}catch(e){FUN.tix=[]}
  try{FUN.marks=JSON.parse(localStorage.getItem('fn-m-'+id)||'{}')}catch(e){FUN.marks={}}
  await funSync(true);push('funroom',{id});
- const h=new Date().getHours(),mine=funNm(FUN.st&&FUN.st.me);funSay([h<17&&h>=5?'welcome_afternoon':'welcome_evening',300].concat(mine?['welcome_name',mine]:['welcome_all']));
+ funPreAll(FUN.st&&FUN.st.game);(FUN.st&&FUN.st.seats||[]).forEach(x=>funPre([funNm(x.id)]));FUN.wl={at:Date.now(),n:1};const h=new Date().getHours(),mine=funNm(FUN.st&&FUN.st.me);funSay([h<17&&h>=5?'welcome_afternoon':'welcome_evening',300].concat(mine?['welcome_name',mine]:['welcome_all']));
  clearInterval(FUN.timer);FUN.timer=setInterval(()=>funSync(),4000);
  try{if(FUN.ch)sb.removeChannel(FUN.ch);FUN.ch=sb.channel('fun:'+id).on('broadcast',{event:'tick'},()=>funSync()).subscribe()}catch(e){}
 }
@@ -196,7 +199,9 @@ async function funSync(first){
  if(!st||st.closed){if(!first&&FUN.st){funSay(['goodnight']);toast('The night has finished. Thank you for playing!');const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')pop()}return}
  const prev=FUN.st,sn=FUN.seen;FUN.st=st;const s=st.state||{};
  if(sn.calls<0){sn.calls=st.calls.length;sn.draws=st.draws.length;sn.claim=st.claim&&st.claim.id;sn.stage=s.stage;sn.ann=s.announce&&s.announce.ts;sn.live=st.status==='live';sn.round=st.round;sn.joining=!!s.joining;sn.ids={};st.seats.forEach(x=>sn.ids[x.id]=1)}
- if(sn.ids){st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u&&st.status!=='live'&&x.id!==st.me)funSay(['welcome_name',u])})}
+ if(sn.ids){const nw=[];st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u){funPre([u]);if(st.status!=='live'&&x.id!==st.me)nw.push(u)}});
+  /* names flow one after another; "Welcome" is only said now and then, not before every name */
+  if(nw.length){const w=FUN.wl||(FUN.wl={at:0,n:0}),say=Date.now()-w.at>20000||w.n>=4;if(say)w.n=0;w.n+=nw.length;w.at=Date.now();funSay((say?['welcome_name']:[]).concat(nw.flatMap((u,i)=>i?[120,u]:[u])))}}
  if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;funSay(st.game==='bingo'?['eyes_down',300,'stage_'+(s.stage||1)]:['raffle_intro',300,'raffle_fair']);if(st.game==='raffle')FUN.fair=true}
  if(st.game==='bingo'){
   if(st.round!==sn.round){sn.round=st.round;sn.calls=st.calls.length;sn.stage=s.stage;sn.joining=!!s.joining;FUN.marks={};try{localStorage.removeItem('fn-m-'+FUN.id)}catch(e){}FUN.tix=[];FUN.skip=false;funSay(['round_new']);funTix()}
@@ -204,7 +209,7 @@ async function funSync(first){
   if(s.stage!==sn.stage&&sn.live){sn.stage=s.stage;funSay(['stage_'+(s.stage||1)])}
   if(st.calls.length>sn.calls){const n=st.calls[st.calls.length-1];sn.calls=st.calls.length;funSay(['nick_'+n,350,'num_'+n])}
   if(st.claim&&st.claim.id!==sn.claim){sn.claim=st.claim.id;const c=st.claim,mine=c.user===st.me;
-   if(c.valid){FUN.over={h:mine?'BINGO! You won!':'We have a winner!',p:`${esc(c.name||'')} wins the ${['one line','two lines','full house'][c.stage-1]} game.`,win:c.user};funSay(['bingo_check',200,()=>funClap(),'bingo_valid'].concat(funNm(c.user)||[],c.stage===3?['bingo_house']:['bingo_line','congrats'],['cheer']),()=>{});funSfx('win');funConfetti()}
+   if(c.valid){FUN.over={h:mine?'BINGO! You won!':'We have a winner!',p:`${esc(c.name||'')} wins the ${['one line','two lines','full house'][c.stage-1]} game.`,win:c.user};funClap();funConfetti();funSay(['bingo_valid'].concat(funNm(c.user)||[],c.stage===3?['bingo_house']:['bingo_line','congrats'],['cheer']),()=>{});funSfx('win');funConfetti()}
    else if(mine){FUN.over={h:'Not yet',p:'That card is not quite there. On we go.'};funSay(['bingo_no'])}
    setTimeout(()=>{FUN.over=null;funPaint()},c.valid?9000:3500)}
  }else{
@@ -219,7 +224,15 @@ async function funSync(first){
  if(!first)funPaint();
 }
 function funPaint(){const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom'&&!FUN.dragging)renderOv(true)}
-function funConfetti(){const c=document.createElement('div');c.className='fn-conf';const col=['#e9b949','#d2372a','#2f9d5c','#39607f','#8a4fb3'];for(let i=0;i<70;i++){const p=document.createElement('i');p.style.left=Math.random()*100+'%';p.style.background=col[i%5];p.style.animationDuration=(2.2+Math.random()*2.5)+'s';p.style.animationDelay=Math.random()*.8+'s';c.appendChild(p)}document.body.appendChild(c);setTimeout(()=>c.remove(),6000)}
+function funConfetti(){
+ try{const old=document.getElementById('fn-fx');if(old)old.remove();const cv=document.createElement('canvas');cv.id='fn-fx';cv.style.cssText='position:fixed;inset:0;width:100%;height:100%;z-index:400;pointer-events:none';document.body.appendChild(cv);
+ const W=cv.width=innerWidth,H=cv.height=innerHeight,g=cv.getContext('2d'),col=['#f6c343','#e4572e','#35c46a','#3d8bd9','#b36ad9','#ff7eb6','#ffffff'],P=[],T0=performance.now(),DUR=6500;
+ for(let i=0;i<170;i++)P.push({k:0,x:Math.random()*W,y:-20-Math.random()*H*.6,vx:(Math.random()-.5)*1.4,vy:2+Math.random()*3.2,w:6+Math.random()*7,h:9+Math.random()*9,r:Math.random()*6,vr:(Math.random()-.5)*.3,c:col[i%7]});
+ const burst=()=>{const x=W*(.15+Math.random()*.7),y=H*(.12+Math.random()*.3),c=col[Math.floor(Math.random()*6)];for(let i=0;i<46;i++){const a=Math.PI*2*i/46,v=2.2+Math.random()*3.2;P.push({k:1,x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:1,c:i%5?c:'#ffffff'})}};
+ [0,450,950,1500,2200,3000,3900].forEach(d=>setTimeout(burst,d));
+ const step=now=>{const e=now-T0;g.clearRect(0,0,W,H);for(const q of P){if(q.k){q.x+=q.vx;q.y+=q.vy;q.vy+=.045;q.vx*=.985;q.vy*=.985;q.life-=.012;if(q.life<=0)continue;g.globalAlpha=Math.max(0,q.life);g.fillStyle=q.c;g.beginPath();g.arc(q.x,q.y,2.6,0,6.3);g.fill()}else{q.x+=q.vx+Math.sin((e+q.r*900)/420)*.9;q.y+=q.vy;q.r+=q.vr;g.globalAlpha=e>DUR-900?Math.max(0,(DUR-e)/900):1;g.save();g.translate(q.x,q.y);g.rotate(q.r);g.fillStyle=q.c;g.fillRect(-q.w/2,-q.h/2,q.w,q.h*Math.abs(Math.cos(q.r*1.7)));g.restore()}}
+  g.globalAlpha=1;if(e<DUR&&cv.isConnected)requestAnimationFrame(step);else cv.remove()};requestAnimationFrame(step)}catch(e){}
+}
 
 /* ---------- the room view ---------- */
 function funFrame(seat,pos,st,i){
