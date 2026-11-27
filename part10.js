@@ -195,7 +195,7 @@ function funNext(){
 }
 function funNm(id){const x=FUN.st&&(FUN.st.seats||[]).find(y=>y.id===id);try{return x&&x.clip?sb.storage.from('fun').getPublicUrl(x.clip).data.publicUrl:null}catch(e){return null}}
 function funPre(list){list.forEach(f=>{if(!f||FAUD[f])return;try{const a=new Audio(/^https?:/.test(f)?f:FV+f+'.mp3');a.preload='auto';a.load();FAUD[f]=a}catch(e){}})}
-function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','goodbye_day','how_to','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next']);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
+function funPreAll(game){funPre(['welcome_name','welcome_all','eyes_down','stage_1','stage_2','stage_3','bingo_valid','bingo_line','bingo_house','bingo_no','bingo_check','congrats','cheer','goodnight','goodbye_day','how_to','round_new','raffle_intro','raffle_fair','raffle_spin','raffle_ticket','raffle_winner','raffle_close','raffle_n1','raffle_n2','raffle_n3','raffle_n4','prize_1','prize_next','open_'+funVar(),'close_'+funVar()]);try{if(!FAUD._clap){FAUD._clap=new Audio(FV+'applause.mp3');FAUD._clap.preload='auto';FAUD._clap.load()}}catch(e){}
  const rest=game==='raffle'?[0,1,2,3,4,5,6,7,8,9].map(d=>'digit_'+d):Array.from({length:90},(_,i)=>['nick_'+(i+1),'num_'+(i+1)]).flat();let i=0;clearInterval(FUN.preT);FUN.preT=setInterval(()=>{if(i>=rest.length||!FUN.id)return clearInterval(FUN.preT);funPre(rest.slice(i,i+4));i+=4},350)}
 function funClap(){try{const a=FAUD._clap||(FAUD._clap=new Audio(FV+'applause.mp3'));a.currentTime=0;a.volume=Math.max(0,Math.min(1,.95*(FUN.vol==null?1:FUN.vol)));a.play().catch(()=>{})}catch(e){}}
 function funRoll(i,dur){funRollStop();if(!FUN.rev)return;FUN.rev.roll=i;funPaint();const t0=Date.now(),fin=FUN.rev.d[i];dur=dur||1600;let last=-1;
@@ -214,19 +214,20 @@ async function funEnterRoom(id){
  clearInterval(FUN.timer);FUN.timer=setInterval(()=>funSync(),4000);
  try{if(FUN.ch)sb.removeChannel(FUN.ch);FUN.ch=sb.channel('fun:'+id).on('broadcast',{event:'tick'},()=>funSync()).subscribe()}catch(e){}
 }
-function funLeave(){clearInterval(FUN.timer);FUN.timer=null;try{if(FUN.ch)sb.removeChannel(FUN.ch)}catch(e){}FUN.ch=null;funTalkOff();funRollStop();funTut(false);FUN.rev=null;FUN.q=[];FUN.id=null}
+function funLeave(){FUN.bye=false;clearInterval(FUN.timer);FUN.timer=null;try{if(FUN.ch)sb.removeChannel(FUN.ch)}catch(e){}FUN.ch=null;funTalkOff();funRollStop();funTut(false);FUN.rev=null;FUN.q=[];FUN.id=null}
 const _pop10=pop;pop=function(){const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')funLeave();return _pop10.apply(this,arguments)};
 const _popall10=popall;popall=function(){if(S.stack.some(x=>x.v==='funroom'))funLeave();return _popall10.apply(this,arguments)};
 ACT.pop=()=>pop();ACT.popall=()=>popall();
+function funVar(){return 'abc'[[...String(FUN.id||'')].reduce((a,c)=>a+c.charCodeAt(0),0)%3]}
 async function funSync(first){
  if(!FUN.id)return;let st;try{st=await frpc('fun_state',{p_night:FUN.id})}catch(e){return}
- if(!st||st.closed){if(!first&&FUN.st){funSay([(()=>{const h=new Date().getHours();return h>=5&&h<17?'goodbye_day':'goodnight'})()]);toast('The night has finished. Thank you for playing!');const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')pop()}return}
+ if(!st||st.closed){if(!first&&FUN.st&&!FUN.bye){FUN.bye=true;funRollStop();funTut(false);const h=new Date().getHours();toast('That is the end. George is saying goodbye…');funSay(['close_'+funVar(),350,h>=5&&h<17?'goodbye_day':'goodnight'],()=>{toast('The night has finished. Thank you for playing!');const t=S.stack[S.stack.length-1];if(t&&t.v==='funroom')pop()})}return}
  const prev=FUN.st,sn=FUN.seen;FUN.st=st;const s=st.state||{};
  if(sn.calls<0){sn.calls=st.calls.length;sn.draws=st.draws.length;sn.claim=st.claim&&st.claim.id;sn.stage=s.stage;sn.ann=s.announce&&s.announce.ts;sn.live=st.status==='live';sn.round=st.round;sn.joining=!!s.joining;sn.ids={};st.seats.forEach(x=>sn.ids[x.id]=1)}
  if(sn.ids){const nw=[];st.seats.forEach(x=>{if(sn.ids[x.id])return;sn.ids[x.id]=1;const u=funNm(x.id);if(u){funPre([u]);if(st.status!=='live'&&x.id!==st.me)nw.push(u)}});
   /* names flow one after another; "Welcome" is only said now and then, not before every name */
   if(nw.length){const w=FUN.wl||(FUN.wl={at:0,n:0}),say=Date.now()-w.at>20000||w.n>=4;if(say)w.n=0;w.n+=nw.length;w.at=Date.now();funSay((say?['welcome_name']:[]).concat(nw.flatMap((u,i)=>i?[120,u]:[u])))}}
- if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;let tut=false;try{tut=st.game==='bingo'&&FUN.tix.length&&!localStorage.getItem('fn-tut-'+FUN.id);if(tut)localStorage.setItem('fn-tut-'+FUN.id,'1')}catch(e){}funSay(st.game==='bingo'?(tut?[()=>funTut(true),'how_to',()=>funTut(false),300]:[]).concat(['eyes_down',300,'stage_'+(s.stage||1)]):['raffle_intro',300,'raffle_fair']);if(st.game==='raffle')FUN.fair=true}
+ if(st.status==='live'&&!sn.live){sn.live=true;sn.stage=s.stage;let tut=false;try{tut=st.game==='bingo'&&FUN.tix.length&&!localStorage.getItem('fn-tut-'+FUN.id);if(tut)localStorage.setItem('fn-tut-'+FUN.id,'1')}catch(e){}let op=[];try{if(!(st.calls||[]).length&&!(st.draws||[]).length&&!localStorage.getItem('fn-op-'+FUN.id)){localStorage.setItem('fn-op-'+FUN.id,'1');op=['open_'+funVar(),450]}}catch(e){}funSay(op.concat(st.game==='bingo'?(tut?[()=>funTut(true),'how_to',()=>funTut(false),300]:[]).concat(['eyes_down',300,'stage_'+(s.stage||1)]):['raffle_intro',300,'raffle_fair']));if(st.game==='raffle')FUN.fair=true}
  if(st.game==='bingo'){
   if(st.round!==sn.round){sn.round=st.round;sn.calls=st.calls.length;sn.stage=s.stage;sn.joining=!!s.joining;FUN.marks={};try{localStorage.removeItem('fn-m-'+FUN.id)}catch(e){}FUN.tix=[];FUN.skip=false;funSay(['round_new']);funTix()}
   if(sn.joining&&!s.joining){funSay(['eyes_down',300,'stage_1'])}sn.joining=!!s.joining;
